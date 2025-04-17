@@ -17,6 +17,14 @@ export interface Tag {
   color: string;
 }
 
+// Verarbeitete Dokument-Definition
+export interface ProcessedDocument {
+  fileId: string;
+  ocr: string; // Extrahierter Text
+  tags: string[]; // Erkannte Objekte/Konzepte
+  confidence: number; // OCR-Konfidenz
+}
+
 // Typen für den Upload-Kontext
 export interface UploadFile extends File {
   id: string;
@@ -38,6 +46,7 @@ interface UploadContextType {
   currentStep: UploadStep;
   currentFileIndex: number;
   availableTags: Tag[];
+  processedDocuments: ProcessedDocument[];
   addFiles: (newFiles: File[]) => void;
   removeFile: (id: string) => void;
   clearFiles: () => void;
@@ -48,6 +57,7 @@ interface UploadContextType {
   addTagToFile: (fileId: string, tag: Tag) => void;
   removeTagFromFile: (fileId: string, tagId: string) => void;
   createTag: (name: string, color: string) => Tag;
+  setProcessedDocuments: (docs: ProcessedDocument[]) => void;
 }
 
 const UploadContext = createContext<UploadContextType | undefined>(undefined);
@@ -81,6 +91,9 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
   const [currentStep, setCurrentStep] = useState<UploadStep>("selection");
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [availableTags, setAvailableTags] = useState<Tag[]>(DEFAULT_TAGS);
+  const [processedDocuments, setProcessedDocuments] = useState<
+    ProcessedDocument[]
+  >([]);
   const { showToast } = useToast();
 
   // Dateien hinzufügen
@@ -121,6 +134,9 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
 
         return updatedFiles;
       });
+
+      // Auch die Verarbeitungsergebnisse für diese Datei entfernen
+      setProcessedDocuments((prev) => prev.filter((doc) => doc.fileId !== id));
     },
     [currentStep]
   );
@@ -128,6 +144,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
   // Alle Dateien entfernen
   const clearFiles = useCallback(() => {
     setFiles([]);
+    setProcessedDocuments([]);
     // Zurücksetzen auf den Auswahlschritt
     setCurrentStep("selection");
   }, []);
@@ -216,6 +233,67 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
     return newTag;
   }, []);
 
+  // Automatisches Hinzufügen von erkannten Tags aus den Verarbeitungsergebnissen
+  React.useEffect(() => {
+    if (processedDocuments.length > 0 && currentStep === "uploading") {
+      // Sammle einzigartige erkannte Objekte/Konzepte
+      const uniqueConcepts = new Set<string>();
+      processedDocuments.forEach((doc) => {
+        doc.tags.forEach((tag) => uniqueConcepts.add(tag));
+      });
+
+      // Für jedes erkannte Konzept, das noch nicht als Tag existiert, erstelle es
+      uniqueConcepts.forEach((concept) => {
+        // Prüfe, ob der Tag bereits existiert
+        const tagExists = availableTags.some(
+          (tag) => tag.name.toLowerCase() === concept.toLowerCase()
+        );
+
+        if (!tagExists) {
+          // Wähle eine zufällige Farbe für den neuen Tag
+          const colors = [
+            "#4285F4",
+            "#0F9D58",
+            "#DB4437",
+            "#F4B400",
+            "#AB47BC",
+            "#009688",
+            "#FF5722",
+            "#E91E63",
+          ];
+          const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+          createTag(concept, randomColor);
+        }
+      });
+
+      // Füge die erkannten Tags zu den Dokumenten hinzu
+      processedDocuments.forEach((processedDoc) => {
+        processedDoc.tags.forEach((conceptTag) => {
+          // Finde den entsprechenden Tag in availableTags
+          const matchingTag = availableTags.find(
+            (tag) => tag.name.toLowerCase() === conceptTag.toLowerCase()
+          );
+
+          // Wenn der Tag existiert und noch nicht zum Dokument hinzugefügt wurde, füge ihn hinzu
+          if (matchingTag) {
+            const file = files.find((f) => f.id === processedDoc.fileId);
+            if (file && !file.tags.some((t) => t.id === matchingTag.id)) {
+              addTagToFile(processedDoc.fileId, matchingTag);
+            }
+          }
+        });
+      });
+    }
+  }, [
+    processedDocuments,
+    currentStep,
+    availableTags,
+    files,
+    addTagToFile,
+    createTag,
+  ]);
+
   // Bereinige die ObjectURLs beim Unmount
   React.useEffect(() => {
     return () => {
@@ -230,6 +308,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
     currentStep,
     currentFileIndex,
     availableTags,
+    processedDocuments,
     addFiles,
     removeFile,
     clearFiles,
@@ -240,6 +319,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
     addTagToFile,
     removeTagFromFile,
     createTag,
+    setProcessedDocuments,
   };
 
   return (

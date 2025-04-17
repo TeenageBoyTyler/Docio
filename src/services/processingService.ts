@@ -1,0 +1,234 @@
+import * as Tesseract from "tesseract.js";
+import * as tf from "@tensorflow/tfjs";
+import * as cocoSsd from "@tensorflow-models/coco-ssd";
+import { createWorker } from "tesseract.js";
+
+// Definiere die Ergebnistypen für OCR und Bilderkennung
+export interface OcrResult {
+  text: string;
+  confidence: number;
+  words: Array<{
+    text: string;
+    confidence: number;
+    bbox: {
+      x0: number;
+      y0: number;
+      x1: number;
+      y1: number;
+    };
+  }>;
+}
+
+export interface DetectionResult {
+  class: string;
+  score: number;
+  bbox: [number, number, number, number]; // [x, y, width, height]
+}
+
+export interface ProcessingResult {
+  fileId: string;
+  ocr: OcrResult | null;
+  detections: DetectionResult[] | null;
+  processingTime: number;
+  error?: string;
+}
+
+// Konfiguration für das OCR
+const OCR_CONFIG = {
+  lang: "eng",
+  logger: (m: any) => console.log(m),
+};
+
+// Lade das COCO-SSD Modell für die Bilderkennung
+let cocoModel: cocoSsd.ObjectDetection | null = null;
+
+export const initializeModels = async (): Promise<void> => {
+  try {
+    // Lade das COCO-SSD Modell vorab, um die Verarbeitung zu beschleunigen
+    if (!cocoModel) {
+      console.log("Initializing TensorFlow and loading COCO-SSD model...");
+      await tf.ready();
+      cocoModel = await cocoSsd.load();
+      console.log("COCO-SSD model loaded successfully");
+    }
+
+    console.log("Tesseract initialized with English language");
+  } catch (error) {
+    console.error("Error initializing models:", error);
+    throw error;
+  }
+};
+
+/**
+ * Extrahiert Text aus einem Bild mit Tesseract OCR
+ */
+const performOcr = async (imageUrl: string): Promise<OcrResult> => {
+  try {
+    // Alternativer Ansatz mit recognize Funktion, wenn der Worker-Ansatz Probleme macht
+    const { data } = await Tesseract.recognize(imageUrl, OCR_CONFIG.lang, {
+      logger: OCR_CONFIG.logger,
+    });
+
+    const result: OcrResult = {
+      text: data.text,
+      confidence: data.confidence,
+      words: data.words.map((word) => ({
+        text: word.text,
+        confidence: word.confidence,
+        bbox: word.bbox,
+      })),
+    };
+
+    return result;
+  } catch (error) {
+    console.error("OCR Error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Erkennt Objekte in einem Bild mit dem COCO-SSD Modell
+ */
+const detectObjects = async (imageUrl: string): Promise<DetectionResult[]> => {
+  try {
+    if (!cocoModel) {
+      await initializeModels();
+    }
+
+    // Lade das Bild
+    const img = new Image();
+    img.src = imageUrl;
+    await new Promise((resolve) => {
+      img.onload = resolve;
+    });
+
+    // Führe die Objekterkennung durch
+    if (cocoModel) {
+      const predictions = await cocoModel.detect(img);
+
+      return predictions.map((pred) => ({
+        class: pred.class,
+        score: pred.score,
+        bbox: pred.bbox,
+      }));
+    }
+
+    throw new Error("COCO-SSD model not loaded");
+  } catch (error) {
+    console.error("Object Detection Error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Verarbeitet eine einzelne Datei mit OCR und Bilderkennung
+ */
+export const processFile = async (
+  fileId: string,
+  imageUrl: string
+): Promise<ProcessingResult> => {
+  const startTime = Date.now();
+
+  try {
+    // Initialisiere die Modelle, falls noch nicht geschehen
+    if (!cocoModel) {
+      await initializeModels();
+    }
+
+    // Führe OCR und Objekterkennung parallel durch
+    const [ocrResult, detectionResult] = await Promise.all([
+      performOcr(imageUrl),
+      detectObjects(imageUrl),
+    ]);
+
+    return {
+      fileId,
+      ocr: ocrResult,
+      detections: detectionResult,
+      processingTime: Date.now() - startTime,
+    };
+  } catch (error) {
+    console.error("Processing Error:", error);
+    return {
+      fileId,
+      ocr: null,
+      detections: null,
+      processingTime: Date.now() - startTime,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+/**
+ * Verarbeitet mehrere Dateien sequentiell
+ * @param files Array von Dateien mit ID und URL
+ * @param onProgress Callback für Fortschrittsanzeige
+ */
+export const processFiles = async (
+  files: Array<{ id: string; preview: string }>,
+  onProgress?: (
+    processed: number,
+    total: number,
+    result?: ProcessingResult
+  ) => void
+): Promise<ProcessingResult[]> => {
+  const results: ProcessingResult[] = [];
+  const total = files.length;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const result = await processFile(file.id, file.preview);
+    results.push(result);
+
+    if (onProgress) {
+      onProgress(i + 1, total, result);
+    }
+  }
+
+  return results;
+};
+
+/**
+ * Speichert die Verarbeitungsergebnisse im localStorage
+ */
+export const saveProcessingResults = (results: ProcessingResult[]): void => {
+  try {
+    // Vorhandene Ergebnisse abrufen und mit neuen zusammenführen
+    const existingResults = localStorage.getItem("docio_processing_results");
+    let allResults: Record<string, ProcessingResult> = {};
+
+    if (existingResults) {
+      allResults = JSON.parse(existingResults);
+    }
+
+    // Neue Ergebnisse hinzufügen oder aktualisieren
+    results.forEach((result) => {
+      allResults[result.fileId] = result;
+    });
+
+    localStorage.setItem(
+      "docio_processing_results",
+      JSON.stringify(allResults)
+    );
+  } catch (error) {
+    console.error("Error saving processing results:", error);
+  }
+};
+
+/**
+ * Ruft die Verarbeitungsergebnisse für eine bestimmte Datei ab
+ */
+export const getProcessingResult = (
+  fileId: string
+): ProcessingResult | null => {
+  try {
+    const results = localStorage.getItem("docio_processing_results");
+    if (!results) return null;
+
+    const allResults: Record<string, ProcessingResult> = JSON.parse(results);
+    return allResults[fileId] || null;
+  } catch (error) {
+    console.error("Error getting processing result:", error);
+    return null;
+  }
+};

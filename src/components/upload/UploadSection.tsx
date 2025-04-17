@@ -4,6 +4,8 @@ import { UploadProvider, useUpload } from "../../context/UploadContext";
 import DragDropFileUpload from "./DragDropFileUpload";
 import FilePreview from "./FilePreview";
 import TaggingView from "./TaggingView";
+import ProcessingView from "./ProcessingView";
+import CloudUploadView from "./CloudUploadView";
 
 // Wrapper für den Upload-Bereich mit Provider
 const UploadSectionWrapper: React.FC = () => {
@@ -16,7 +18,8 @@ const UploadSectionWrapper: React.FC = () => {
 
 // Inhalt des Upload-Bereichs (mit Zugriff auf den Kontext)
 const UploadSectionContent: React.FC = () => {
-  const { currentStep, files, goToNextStep } = useUpload();
+  const { currentStep, files, goToNextStep, clearFiles, goToStep } =
+    useUpload();
 
   // Automatisch zum nächsten Schritt, wenn Dateien ausgewählt wurden
   React.useEffect(() => {
@@ -24,6 +27,18 @@ const UploadSectionContent: React.FC = () => {
       goToNextStep();
     }
   }, [currentStep, files, goToNextStep]);
+
+  // Handler für die Success-View Buttons
+  const handleViewDocuments = () => {
+    // In einer echten Anwendung würde dies zur Dokument-Archiv-Ansicht führen
+    console.log("View documents");
+    // Hier könnten wir zur Profil-Sektion navigieren
+  };
+
+  const handleUploadMore = () => {
+    clearFiles();
+    goToStep("selection");
+  };
 
   // Zeige den entsprechenden Schritt basierend auf currentStep
   const renderStepContent = () => {
@@ -35,52 +50,9 @@ const UploadSectionContent: React.FC = () => {
       case "tagging":
         return <TaggingView />;
       case "processing":
-        return (
-          <ComingSoonStep>
-            <ProcessingIcon>
-              <svg
-                width="48"
-                height="48"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z"
-                  fill="currentColor"
-                />
-                <path d="M12 6V12L16 14" fill="currentColor" />
-              </svg>
-            </ProcessingIcon>
-            <StepTitle>Processing Documents</StepTitle>
-            <StepDescription>
-              This step will extract text and recognize content in your images.
-            </StepDescription>
-          </ComingSoonStep>
-        );
+        return <ProcessingView />;
       case "uploading":
-        return (
-          <ComingSoonStep>
-            <ProcessingIcon>
-              <svg
-                width="48"
-                height="48"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04ZM19 18H6C3.79 18 2 16.21 2 14C2 11.95 3.53 10.24 5.56 10.03L6.63 9.92L7.13 8.97C8.08 7.14 9.94 6 12 6C14.62 6 16.88 7.86 17.39 10.43L17.69 11.93L19.22 12.04C20.78 12.14 22 13.45 22 15C22 16.65 20.65 18 19 18ZM8 13H10.55V16H13.45V13H16L12 9L8 13Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </ProcessingIcon>
-            <StepTitle>Uploading to Cloud Storage</StepTitle>
-            <StepDescription>
-              Your documents are being securely stored in your cloud storage.
-            </StepDescription>
-          </ComingSoonStep>
-        );
+        return <CloudUploadView />;
       case "success":
         return (
           <ComingSoonStep>
@@ -99,12 +71,13 @@ const UploadSectionContent: React.FC = () => {
               </svg>
             </SuccessIcon>
             <StepTitle>Upload Complete!</StepTitle>
-            <StepDescription>
-              Your documents have been successfully uploaded and processed.
-            </StepDescription>
             <ActionButtons>
-              <ActionButton variant="primary">View Documents</ActionButton>
-              <ActionButton variant="secondary">Upload More</ActionButton>
+              <ActionButton variant="primary" onClick={handleViewDocuments}>
+                View Documents
+              </ActionButton>
+              <ActionButton variant="secondary" onClick={handleUploadMore}>
+                Upload More
+              </ActionButton>
             </ActionButtons>
           </ComingSoonStep>
         );
