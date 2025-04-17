@@ -1,3 +1,4 @@
+// src/context/ProfileContext.tsx
 import React, {
   createContext,
   useContext,
@@ -8,32 +9,16 @@ import React, {
 } from "react";
 import { useToast } from "./ToastContext";
 import { Tag } from "./UploadContext";
-import { cloudStorage } from "../services/cloudStorageService";
-
-// Definiere die unterschiedlichen Ansichten im Profil-Bereich
-export type ProfileView = "home" | "documents" | "tags" | "settings";
-
-// Typ für die Dokument-Metadaten
-export interface DocumentMetadata {
-  id: string;
-  path: string;
-  name: string;
-  tags: string[];
-  ocr: string;
-  detections: string[];
-  uploadDate: string;
-  preview?: string; // Vorschaubild-URL (optional)
-}
-
-// Processing-Methode
-export type ProcessingMethod = "client-side" | "api";
-
-// Typ für die API-Konfiguration
-export interface ApiConfig {
-  provider: string;
-  apiKey: string;
-  isActive: boolean;
-}
+import { cloudStorage } from "../services/cloudStorageService"; // Alten Import beibehalten
+// import { cloudStorage } from "../services/cloudStorage"; // Neuen temporär auskommentieren
+import { localCache } from "../services/localCacheService";
+import { syncService } from "../services/syncService";
+import {
+  DocumentMetadata,
+  CloudProvider,
+  ApiConfig,
+  ProcessingMethod,
+} from "../types/cloudStorage";
 
 // ProfileContext Interface
 interface ProfileContextType {
@@ -76,10 +61,18 @@ interface ProfileContextType {
   testApiConnection: (provider: string) => Promise<boolean>;
 
   // Cloud-Storage
-  cloudProvider: string | null;
+  cloudProvider: CloudProvider | null;
   isCloudConnected: boolean;
-  connectToCloud: (provider: string) => Promise<boolean>;
+  connectToCloud: (provider: CloudProvider) => Promise<boolean>;
   disconnectFromCloud: () => Promise<boolean>;
+
+  // Synchronisierungsstatus
+  syncStatus: {
+    lastSyncTime: number;
+    hasOfflineChanges: boolean;
+    syncInProgress: boolean;
+  };
+  forceSynchronize: () => Promise<boolean>;
 
   // Statistiken
   documentCount: number;
@@ -93,6 +86,9 @@ interface ProfileContextType {
   isLoading: boolean;
   lastActivity: { action: string; timestamp: string }[];
 }
+
+// Definiere die unterschiedlichen Ansichten im Profil-Bereich
+export type ProfileView = "home" | "documents" | "tags" | "settings";
 
 // Erstelle den Kontext
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -135,8 +131,17 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
   ]);
 
   // Cloud-Storage
-  const [cloudProvider, setCloudProvider] = useState<string | null>(null);
+  const [cloudProvider, setCloudProvider] = useState<CloudProvider | null>(
+    null
+  );
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
+
+  // Synchronisierungsstatus
+  const [syncStatus, setSyncStatus] = useState({
+    lastSyncTime: 0,
+    hasOfflineChanges: false,
+    syncInProgress: false,
+  });
 
   // Status
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -155,6 +160,40 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
     total: 1000, // Standardwert in MB
   });
 
+  // Aktualisiere den Synchronisierungsstatus
+  const updateSyncStatus = useCallback(() => {
+    setSyncStatus({
+      lastSyncTime: syncService.getLastSyncTime(),
+      hasOfflineChanges: syncService.hasOfflineChanges(),
+      syncInProgress: false,
+    });
+  }, []);
+
+  // Erzwinge eine Synchronisierung
+  const forceSynchronize = async (): Promise<boolean> => {
+    setSyncStatus((prev) => ({ ...prev, syncInProgress: true }));
+    try {
+      const result = await syncService.synchronize();
+      updateSyncStatus();
+
+      if (result.success) {
+        await loadDocuments();
+        await loadTags();
+        showToast("Synchronization successful", "success");
+        return true;
+      } else {
+        showToast("Synchronization failed", "error");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error during synchronization:", error);
+      showToast("Synchronization failed", "error");
+      return false;
+    } finally {
+      setSyncStatus((prev) => ({ ...prev, syncInProgress: false }));
+    }
+  };
+
   // Prüfen der Cloud-Verbindung beim Laden
   useEffect(() => {
     const checkCloudConnection = async () => {
@@ -164,11 +203,64 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       if (connected) {
         setCloudProvider(cloudStorage.getCurrentProvider());
         await loadInitialData();
+
+        // Starte die Hintergrund-Synchronisierung
+        syncService.startBackgroundSync();
+      } else {
+        // Versuche, Daten aus dem lokalen Cache zu laden
+        await loadFromLocalCache();
       }
     };
 
-    checkCloudConnection();
+    // Initialisiere den lokalen Cache
+    localCache.initialize().then(() => {
+      checkCloudConnection();
+    });
+
+    return () => {
+      // Stoppe die Hintergrund-Synchronisierung beim Unmount
+      syncService.stopBackgroundSync();
+    };
   }, []);
+
+  // Laden aus dem lokalen Cache, wenn keine Cloud-Verbindung besteht
+  const loadFromLocalCache = async () => {
+    try {
+      const cachedMetadata = await localCache.loadMetadata();
+      if (cachedMetadata) {
+        if (cachedMetadata.documents) {
+          const documentsArray = Object.values(cachedMetadata.documents);
+          setDocuments(documentsArray);
+          setDocumentCount(documentsArray.length);
+        }
+
+        if (cachedMetadata.tags) {
+          setAvailableTags(cachedMetadata.tags);
+          setTagCount(cachedMetadata.tags.length);
+        }
+
+        if (cachedMetadata.settings) {
+          setProcessingMethod(cachedMetadata.settings.processingMethod);
+          setApiConfigs(cachedMetadata.settings.apiConfigs);
+          setLastActivity(cachedMetadata.settings.lastActivity || []);
+        }
+      } else {
+        // Standard-Tags als Fallback
+        const defaultTags: Tag[] = [
+          { id: "tag1", name: "Invoice", color: "#4285F4" },
+          { id: "tag2", name: "Receipt", color: "#0F9D58" },
+          { id: "tag3", name: "Contract", color: "#DB4437" },
+          { id: "tag4", name: "Personal", color: "#F4B400" },
+          { id: "tag5", name: "Work", color: "#AB47BC" },
+        ];
+        setAvailableTags(defaultTags);
+        setTagCount(defaultTags.length);
+      }
+    } catch (error) {
+      console.error("Error loading from local cache:", error);
+      showToast("Couldn't load cached data", "error");
+    }
+  };
 
   // Laden der anfänglichen Daten
   const loadInitialData = async () => {
@@ -178,18 +270,11 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       await loadTags();
 
       // Lade die Verarbeitungseinstellungen
-      const settings = await cloudStorage.loadSettings();
-      if (settings && settings.processingMethod) {
-        setProcessingMethod(settings.processingMethod);
-      }
-
-      if (settings && settings.apiConfigs) {
-        setApiConfigs(settings.apiConfigs);
-      }
-
-      // Lade die letzten Aktivitäten
-      if (settings && settings.lastActivity) {
-        setLastActivity(settings.lastActivity);
+      const metadata = await cloudStorage.loadMetadata();
+      if (metadata && metadata.settings) {
+        setProcessingMethod(metadata.settings.processingMethod);
+        setApiConfigs(metadata.settings.apiConfigs);
+        setLastActivity(metadata.settings.lastActivity || []);
       }
 
       // Berechne Statistiken
@@ -201,9 +286,15 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
         used: 150, // 150 MB genutzt
         total: 1000, // 1 GB gesamt
       });
+
+      // Aktualisiere den Synchronisierungsstatus
+      updateSyncStatus();
     } catch (error) {
       console.error("Error loading initial data:", error);
       showToast("Couldn't load profile data. Please try again.", "error");
+
+      // Versuche, Daten aus dem lokalen Cache zu laden
+      await loadFromLocalCache();
     } finally {
       setIsLoading(false);
     }
@@ -211,16 +302,23 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
 
   // Dokument-Management-Funktionen
   const loadDocuments = async () => {
-    if (!isCloudConnected) return;
-
     setIsLoading(true);
     try {
-      const metadata = await cloudStorage.loadMetadata();
+      let metadata;
+
+      if (isCloudConnected) {
+        metadata = await cloudStorage.loadMetadata();
+
+        // Speichere die Metadaten im lokalen Cache
+        if (metadata) {
+          await localCache.saveMetadata(metadata);
+        }
+      } else {
+        metadata = await localCache.loadMetadata();
+      }
 
       if (metadata && metadata.documents) {
-        const documentsArray = Object.values(
-          metadata.documents
-        ) as DocumentMetadata[];
+        const documentsArray = Object.values(metadata.documents);
         setDocuments(documentsArray);
         setDocumentCount(documentsArray.length);
       } else {
@@ -230,6 +328,14 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
     } catch (error) {
       console.error("Error loading documents:", error);
       showToast("Couldn't load documents. Please try again.", "error");
+
+      // Versuche, aus dem lokalen Cache zu laden
+      const cachedMetadata = await localCache.loadMetadata();
+      if (cachedMetadata && cachedMetadata.documents) {
+        const documentsArray = Object.values(cachedMetadata.documents);
+        setDocuments(documentsArray);
+        setDocumentCount(documentsArray.length);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -253,18 +359,46 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
   }, []);
 
   const deleteDocuments = async (ids: string[]) => {
-    if (!isCloudConnected || ids.length === 0) return false;
+    if (ids.length === 0) return false;
 
     setIsLoading(true);
     try {
-      // Hier würde die tatsächliche Löschlogik implementiert werden
-      // Für jetzt nur eine simulierte Löschung
-
-      // Dokumente aus dem lokalen State entfernen
+      // Entferne Dokumente aus dem State
       setDocuments((prev) => prev.filter((doc) => !ids.includes(doc.id)));
-
-      // Aktualisiere die Dokumentenanzahl
       setDocumentCount((prev) => prev - ids.length);
+
+      // Aktualisiere die Metadaten
+      const metadata = await localCache.loadMetadata();
+      if (metadata) {
+        // Entferne die Dokumente aus den Metadaten
+        ids.forEach((id) => {
+          if (metadata.documents[id]) {
+            delete metadata.documents[id];
+          }
+        });
+
+        // Speichere lokal
+        await localCache.saveMetadata(metadata);
+
+        // Wenn verbunden, speichere in der Cloud
+        if (isCloudConnected) {
+          try {
+            await cloudStorage.saveMetadata(metadata);
+          } catch (error) {
+            console.error("Error saving to cloud:", error);
+
+            // Registriere für spätere Synchronisierung
+            ids.forEach((id) => {
+              syncService.registerDocumentChange(id, "delete");
+            });
+          }
+        } else {
+          // Registriere für spätere Synchronisierung
+          ids.forEach((id) => {
+            syncService.registerDocumentChange(id, "delete");
+          });
+        }
+      }
 
       // Lösche die Selektion
       clearSelection();
@@ -287,16 +421,25 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       return false;
     } finally {
       setIsLoading(false);
+      updateSyncStatus();
     }
   };
 
   // Tag-Management-Funktionen
   const loadTags = async () => {
-    if (!isCloudConnected) return;
-
-    setIsLoading(true);
     try {
-      const metadata = await cloudStorage.loadMetadata();
+      let metadata;
+
+      if (isCloudConnected) {
+        metadata = await cloudStorage.loadMetadata();
+
+        // Speichere die Metadaten im lokalen Cache
+        if (metadata) {
+          await localCache.saveMetadata(metadata);
+        }
+      } else {
+        metadata = await localCache.loadMetadata();
+      }
 
       if (metadata && metadata.tags) {
         setAvailableTags(metadata.tags);
@@ -316,14 +459,10 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
     } catch (error) {
       console.error("Error loading tags:", error);
       showToast("Couldn't load tags. Please try again.", "error");
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const createTag = async (name: string, color: string) => {
-    if (!isCloudConnected) return null;
-
     try {
       const newTag: Tag = {
         id: `tag-${Math.random().toString(36).substring(2, 11)}`,
@@ -342,9 +481,30 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       };
       setLastActivity((prev) => [newActivity, ...prev.slice(0, 9)]);
 
-      // Hier würde die Aktualisierung der Tags in der Cloud erfolgen
+      // Speichere die Änderungen
+      const metadata = await localCache.loadMetadata();
+      if (metadata) {
+        metadata.tags = [...(metadata.tags || []), newTag];
+        await localCache.saveMetadata(metadata);
+
+        // Wenn verbunden, speichere in der Cloud
+        if (isCloudConnected) {
+          try {
+            await cloudStorage.saveMetadata(metadata);
+          } catch (error) {
+            console.error("Error saving to cloud:", error);
+
+            // Registriere für spätere Synchronisierung
+            syncService.registerTagChange(newTag.id, "add", newTag);
+          }
+        } else {
+          // Registriere für spätere Synchronisierung
+          syncService.registerTagChange(newTag.id, "add", newTag);
+        }
+      }
 
       showToast(`Tag "${name}" created`, "success");
+      updateSyncStatus();
       return newTag;
     } catch (error) {
       console.error("Error creating tag:", error);
@@ -354,8 +514,6 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
   };
 
   const updateTag = async (id: string, name: string, color: string) => {
-    if (!isCloudConnected) return false;
-
     try {
       // Aktualisiere den lokalen State
       setAvailableTags((prev) =>
@@ -369,9 +527,38 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       };
       setLastActivity((prev) => [newActivity, ...prev.slice(0, 9)]);
 
-      // Hier würde die Aktualisierung der Tags in der Cloud erfolgen
+      // Speichere die Änderungen
+      const metadata = await localCache.loadMetadata();
+      if (metadata) {
+        metadata.tags = metadata.tags.map((tag) =>
+          tag.id === id ? { ...tag, name, color } : tag
+        );
+        await localCache.saveMetadata(metadata);
+
+        // Wenn verbunden, speichere in der Cloud
+        if (isCloudConnected) {
+          try {
+            await cloudStorage.saveMetadata(metadata);
+          } catch (error) {
+            console.error("Error saving to cloud:", error);
+
+            // Registriere für spätere Synchronisierung
+            const updatedTag = metadata.tags.find((tag) => tag.id === id);
+            if (updatedTag) {
+              syncService.registerTagChange(id, "update", updatedTag);
+            }
+          }
+        } else {
+          // Registriere für spätere Synchronisierung
+          const updatedTag = metadata.tags.find((tag) => tag.id === id);
+          if (updatedTag) {
+            syncService.registerTagChange(id, "update", updatedTag);
+          }
+        }
+      }
 
       showToast(`Tag "${name}" updated`, "success");
+      updateSyncStatus();
       return true;
     } catch (error) {
       console.error("Error updating tag:", error);
@@ -381,8 +568,6 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
   };
 
   const deleteTag = async (id: string) => {
-    if (!isCloudConnected) return false;
-
     try {
       // Finde den Tag-Namen für die Aktivitätsaufzeichnung
       const tagName =
@@ -399,9 +584,40 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       };
       setLastActivity((prev) => [newActivity, ...prev.slice(0, 9)]);
 
-      // Hier würde die Aktualisierung der Tags in der Cloud erfolgen
+      // Speichere die Änderungen
+      const metadata = await localCache.loadMetadata();
+      if (metadata) {
+        metadata.tags = metadata.tags.filter((tag) => tag.id !== id);
+
+        // Entferne den Tag auch aus allen Dokumenten
+        for (const docId in metadata.documents) {
+          if (metadata.documents[docId].tags.includes(id)) {
+            metadata.documents[docId].tags = metadata.documents[
+              docId
+            ].tags.filter((tagId) => tagId !== id);
+          }
+        }
+
+        await localCache.saveMetadata(metadata);
+
+        // Wenn verbunden, speichere in der Cloud
+        if (isCloudConnected) {
+          try {
+            await cloudStorage.saveMetadata(metadata);
+          } catch (error) {
+            console.error("Error saving to cloud:", error);
+
+            // Registriere für spätere Synchronisierung
+            syncService.registerTagChange(id, "delete");
+          }
+        } else {
+          // Registriere für spätere Synchronisierung
+          syncService.registerTagChange(id, "delete");
+        }
+      }
 
       showToast(`Tag "${tagName}" deleted`, "success");
+      updateSyncStatus();
       return true;
     } catch (error) {
       console.error("Error deleting tag:", error);
@@ -412,7 +628,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
 
   // Dokument-Tag-Bearbeitungsfunktionen
   const addTagToDocuments = async (documentIds: string[], tagId: string) => {
-    if (!isCloudConnected || documentIds.length === 0) return false;
+    if (documentIds.length === 0) return false;
 
     try {
       // Finde den Tag für die Aktivitätsaufzeichnung
@@ -441,7 +657,51 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       };
       setLastActivity((prev) => [newActivity, ...prev.slice(0, 9)]);
 
-      // Hier würde die Aktualisierung der Dokumente in der Cloud erfolgen
+      // Speichere die Änderungen
+      const metadata = await localCache.loadMetadata();
+      if (metadata) {
+        documentIds.forEach((docId) => {
+          if (
+            metadata.documents[docId] &&
+            !metadata.documents[docId].tags.includes(tagId)
+          ) {
+            metadata.documents[docId].tags.push(tagId);
+          }
+        });
+
+        await localCache.saveMetadata(metadata);
+
+        // Wenn verbunden, speichere in der Cloud
+        if (isCloudConnected) {
+          try {
+            await cloudStorage.saveMetadata(metadata);
+          } catch (error) {
+            console.error("Error saving to cloud:", error);
+
+            // Registriere für spätere Synchronisierung
+            documentIds.forEach((docId) => {
+              if (metadata.documents[docId]) {
+                syncService.registerDocumentChange(
+                  docId,
+                  "update",
+                  metadata.documents[docId]
+                );
+              }
+            });
+          }
+        } else {
+          // Registriere für spätere Synchronisierung
+          documentIds.forEach((docId) => {
+            if (metadata.documents[docId]) {
+              syncService.registerDocumentChange(
+                docId,
+                "update",
+                metadata.documents[docId]
+              );
+            }
+          });
+        }
+      }
 
       showToast(
         `Tag added to ${documentIds.length} document${
@@ -449,6 +709,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
         }`,
         "success"
       );
+      updateSyncStatus();
       return true;
     } catch (error) {
       console.error("Error adding tag to documents:", error);
@@ -458,8 +719,6 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
   };
 
   const removeTagFromDocument = async (documentId: string, tagId: string) => {
-    if (!isCloudConnected) return false;
-
     try {
       // Finde den Tag für die Aktivitätsaufzeichnung
       const tagName =
@@ -482,9 +741,40 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       };
       setLastActivity((prev) => [newActivity, ...prev.slice(0, 9)]);
 
-      // Hier würde die Aktualisierung der Dokumente in der Cloud erfolgen
+      // Speichere die Änderungen
+      const metadata = await localCache.loadMetadata();
+      if (metadata && metadata.documents[documentId]) {
+        metadata.documents[documentId].tags = metadata.documents[
+          documentId
+        ].tags.filter((id) => id !== tagId);
+        await localCache.saveMetadata(metadata);
+
+        // Wenn verbunden, speichere in der Cloud
+        if (isCloudConnected) {
+          try {
+            await cloudStorage.saveMetadata(metadata);
+          } catch (error) {
+            console.error("Error saving to cloud:", error);
+
+            // Registriere für spätere Synchronisierung
+            syncService.registerDocumentChange(
+              documentId,
+              "update",
+              metadata.documents[documentId]
+            );
+          }
+        } else {
+          // Registriere für spätere Synchronisierung
+          syncService.registerDocumentChange(
+            documentId,
+            "update",
+            metadata.documents[documentId]
+          );
+        }
+      }
 
       showToast(`Tag removed from document`, "success");
+      updateSyncStatus();
       return true;
     } catch (error) {
       console.error("Error removing tag from document:", error);
@@ -517,9 +807,40 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
         setProcessingMethod("api");
       }
 
-      // Hier würde die Aktualisierung der Einstellungen in der Cloud erfolgen
+      // Speichere die Änderungen
+      const metadata = await localCache.loadMetadata();
+      if (metadata) {
+        metadata.settings.apiConfigs = metadata.settings.apiConfigs.map(
+          (config) =>
+            config.provider === provider
+              ? { ...config, apiKey, isActive }
+              : config
+        );
+
+        if (isActive && metadata.settings.processingMethod !== "api") {
+          metadata.settings.processingMethod = "api";
+        }
+
+        await localCache.saveMetadata(metadata);
+
+        // Wenn verbunden, speichere in der Cloud
+        if (isCloudConnected) {
+          try {
+            await cloudStorage.saveMetadata(metadata);
+          } catch (error) {
+            console.error("Error saving to cloud:", error);
+
+            // Registriere für spätere Synchronisierung
+            syncService.registerSettingsChange();
+          }
+        } else {
+          // Registriere für spätere Synchronisierung
+          syncService.registerSettingsChange();
+        }
+      }
 
       showToast(`${provider} API configuration updated`, "success");
+      updateSyncStatus();
       return true;
     } catch (error) {
       console.error("Error updating API configuration:", error);
@@ -560,9 +881,9 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
   };
 
   // Cloud-Storage-Funktionen
-  const connectToCloud = async (provider: string) => {
+  const connectToCloud = async (provider: CloudProvider) => {
     try {
-      const success = await cloudStorage.connect(provider.toLowerCase());
+      const success = await cloudStorage.connect(provider);
 
       if (success) {
         setIsCloudConnected(true);
@@ -570,6 +891,9 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
 
         // Lade die anfänglichen Daten
         await loadInitialData();
+
+        // Starte die Hintergrund-Synchronisierung
+        syncService.startBackgroundSync();
 
         showToast(`Connected to ${provider}`, "success");
       } else {
@@ -586,8 +910,11 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
 
   const disconnectFromCloud = async () => {
     try {
-      // Hier würde die tatsächliche Trennung stattfinden
-      // Für jetzt nur eine simulierte Aktion
+      // Stoppe die Hintergrund-Synchronisierung
+      syncService.stopBackgroundSync();
+
+      // Trenne die Verbindung zum Cloud-Provider
+      cloudStorage.disconnect();
 
       setIsCloudConnected(false);
       setCloudProvider(null);
@@ -649,6 +976,9 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
     isCloudConnected,
     connectToCloud,
     disconnectFromCloud,
+
+    syncStatus,
+    forceSynchronize,
 
     documentCount,
     tagCount,

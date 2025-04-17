@@ -4,7 +4,8 @@ import { Dropbox } from "dropbox";
 const DROPBOX_APP_KEY = "YOUR_DROPBOX_APP_KEY";
 const DROPBOX_REDIRECT_URI = "http://localhost:5173/auth/callback";
 
-export type CloudProvider = "dropbox" | "google-drive" | "onedrive";
+// Mock-Provider hinzugefügt
+export type CloudProvider = "dropbox" | "google-drive" | "onedrive" | "mock";
 
 export interface CloudStorageConfig {
   provider: CloudProvider;
@@ -44,6 +45,14 @@ export interface MetadataStorage {
 class CloudStorageService {
   private config: CloudStorageConfig | null = null;
   private dropbox: Dropbox | null = null;
+  // Speicher für Mock-Daten
+  private mockStorage: {
+    metadata: MetadataStorage;
+    files: Record<string, CloudFile>;
+  } = {
+    metadata: { documents: {} },
+    files: {},
+  };
 
   constructor() {
     // Versuche, die gespeicherte Konfiguration zu laden
@@ -75,6 +84,10 @@ class CloudStorageService {
       case "dropbox":
         this.initializeDropbox();
         break;
+      case "mock":
+        // Mock-Provider benötigt keine spezielle Initialisierung
+        console.log("Mock provider initialized");
+        break;
       // Andere Provider hier implementieren
       default:
         console.error("Unsupported cloud provider");
@@ -101,6 +114,8 @@ class CloudStorageService {
       switch (provider) {
         case "dropbox":
           return this.connectToDropbox();
+        case "mock":
+          return this.connectToMockProvider();
         // Andere Provider hier implementieren
         default:
           throw new Error("Unsupported cloud provider");
@@ -140,6 +155,38 @@ class CloudStorageService {
   }
 
   /**
+   * Mock-Provider-Verbindung (Ohne OAuth)
+   */
+  private connectToMockProvider(): boolean {
+    try {
+      // Simuliere eine erfolgreiche Verbindung
+      this.config = {
+        provider: "mock",
+        accessToken: "mock-token-" + Date.now(),
+        refreshToken: "mock-refresh-token",
+        expiration: Date.now() + 3600 * 1000, // 1 Stunde Gültigkeit
+      };
+
+      // Initialisiere Standard-Metadaten für den Mock-Provider
+      this.mockStorage = {
+        metadata: {
+          documents: {},
+        },
+        files: {},
+      };
+
+      // Speichere die Konfiguration
+      this.saveConfig();
+      localStorage.setItem("docio_auth_provider", "mock");
+
+      return true;
+    } catch (error) {
+      console.error("Mock connection error:", error);
+      return false;
+    }
+  }
+
+  /**
    * OAuth-Rückruf verarbeiten
    */
   public async handleAuthCallback(code: string): Promise<boolean> {
@@ -150,6 +197,9 @@ class CloudStorageService {
       switch (provider) {
         case "dropbox":
           return this.handleDropboxCallback(code);
+        case "mock":
+          // Mock-Provider benötigt keine Callback-Verarbeitung
+          return true;
         // Andere Provider hier implementieren
         default:
           throw new Error("Unsupported cloud provider");
@@ -192,7 +242,12 @@ class CloudStorageService {
    * Überprüfen, ob der Benutzer mit einem Cloud-Provider verbunden ist
    */
   public isConnected(): boolean {
-    if (!this.config || !this.config.accessToken) return false;
+    if (!this.config) return false;
+
+    // Mock-Provider hat immer eine Verbindung, wenn konfiguriert
+    if (this.config.provider === "mock") return true;
+
+    if (!this.config.accessToken) return false;
 
     // Prüfen, ob das Token abgelaufen ist
     if (this.config.expiration && Date.now() > this.config.expiration) {
@@ -213,6 +268,12 @@ class CloudStorageService {
       switch (this.config.provider) {
         case "dropbox":
           return this.refreshDropboxToken();
+        case "mock":
+          // Für Mock einfach ein neues Token generieren
+          this.config.accessToken = "mock-token-" + Date.now();
+          this.config.expiration = Date.now() + 3600 * 1000; // 1 Stunde
+          this.saveConfig();
+          return true;
         // Andere Provider hier implementieren
         default:
           throw new Error("Unsupported cloud provider");
@@ -257,6 +318,7 @@ class CloudStorageService {
   public disconnect(): void {
     this.config = null;
     this.dropbox = null;
+    this.mockStorage = { metadata: { documents: {} }, files: {} };
     localStorage.removeItem("docio_cloud_config");
     localStorage.removeItem("docio_auth_provider");
   }
@@ -273,6 +335,8 @@ class CloudStorageService {
       switch (this.config?.provider) {
         case "dropbox":
           return this.uploadFileToDropbox(file, path);
+        case "mock":
+          return this.uploadFileToMockStorage(file, path);
         // Andere Provider hier implementieren
         default:
           throw new Error("Unsupported cloud provider");
@@ -333,6 +397,48 @@ class CloudStorageService {
   }
 
   /**
+   * Datei in Mock-Speicher hochladen
+   */
+  private async uploadFileToMockStorage(
+    file: File,
+    path: string
+  ): Promise<UploadResult> {
+    try {
+      // Simuliere Verzögerung
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Generiere Mock-Datei
+      const fileId = `mock-file-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 11)}`;
+      const cloudFile: CloudFile = {
+        id: fileId,
+        name: file.name,
+        path: `/${path}/${file.name}`,
+        size: file.size,
+        lastModified: new Date(),
+      };
+
+      // Speichere in Mock-Speicher
+      this.mockStorage.files[fileId] = cloudFile;
+
+      return {
+        success: true,
+        file: cloudFile,
+      };
+    } catch (error) {
+      console.error("Mock upload error:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unknown error during mock upload",
+      };
+    }
+  }
+
+  /**
    * Metadaten in der .docio/-Struktur speichern
    */
   public async saveMetadata(metadata: MetadataStorage): Promise<boolean> {
@@ -342,6 +448,8 @@ class CloudStorageService {
       switch (this.config?.provider) {
         case "dropbox":
           return this.saveMetadataToDropbox(metadata);
+        case "mock":
+          return this.saveMetadataToMockStorage(metadata);
         // Andere Provider hier implementieren
         default:
           throw new Error("Unsupported cloud provider");
@@ -391,6 +499,26 @@ class CloudStorageService {
   }
 
   /**
+   * Metadaten im Mock-Speicher speichern
+   */
+  private async saveMetadataToMockStorage(
+    metadata: MetadataStorage
+  ): Promise<boolean> {
+    try {
+      // Simuliere Verzögerung
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Speichere Metadaten im Mock-Storage
+      this.mockStorage.metadata = { ...metadata };
+
+      return true;
+    } catch (error) {
+      console.error("Mock metadata save error:", error);
+      return false;
+    }
+  }
+
+  /**
    * Metadaten aus der Cloud laden
    */
   public async loadMetadata(): Promise<MetadataStorage | null> {
@@ -400,6 +528,8 @@ class CloudStorageService {
       switch (this.config?.provider) {
         case "dropbox":
           return this.loadMetadataFromDropbox();
+        case "mock":
+          return this.loadMetadataFromMockStorage();
         // Andere Provider hier implementieren
         default:
           throw new Error("Unsupported cloud provider");
@@ -435,6 +565,21 @@ class CloudStorageService {
       console.error("Dropbox metadata load error:", error);
       return null;
     }
+  }
+
+  /**
+   * Metadaten aus Mock-Speicher laden
+   */
+  private async loadMetadataFromMockStorage(): Promise<MetadataStorage> {
+    // Simuliere Verzögerung
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Standardmetadaten, wenn keine vorhanden sind
+    if (!this.mockStorage.metadata) {
+      this.mockStorage.metadata = { documents: {} };
+    }
+
+    return this.mockStorage.metadata;
   }
 
   /**

@@ -9,6 +9,9 @@ import {
   initializeModels,
 } from "../../services/processingService";
 import { useToast } from "../../context/ToastContext";
+// Importieren der standardisierten Komponenten
+import { Button } from "../shared/buttons";
+import { Spinner, LoadingOverlay } from "../shared/loading";
 
 const ProcessingView: React.FC = () => {
   const { files, goToNextStep, goToPreviousStep } = useUpload();
@@ -76,7 +79,7 @@ const ProcessingView: React.FC = () => {
       // Falls keine Dateien vorhanden sind, zurück zum vorherigen Schritt
       goToPreviousStep();
     }
-  }, [files, goToNextStep, goToPreviousStep, showToast]);
+  }, [files, goToNextStep, goToPreviousStep, showToast, setProcessedDocuments]);
 
   // Lade nochmal, falls ein Fehler auftritt
   const handleRetry = () => {
@@ -89,50 +92,51 @@ const ProcessingView: React.FC = () => {
 
   return (
     <Container>
+      {/* LoadingOverlay für blockierendes Laden bei längeren Prozessen */}
+      <LoadingOverlay
+        isVisible={isProcessing && files.length > 3}
+        text={`Analyzing documents (${currentFile}/${files.length})`}
+        showText={true}
+        blockInteraction={true}
+      />
+
       <ProcessingContent>
-        <ProcessingIcon isProcessing={isProcessing}>
+        <StatusIconContainer>
           {isProcessing ? (
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z"
-                fill="currentColor"
-              />
-              <path d="M12 6V12L16 14" fill="currentColor" />
-            </svg>
+            /* Standardisierter Spinner statt eigener Animation */
+            <Spinner size="large" color={error ? undefined : undefined} />
           ) : error ? (
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM11 15H13V17H11V15ZM11 7H13V13H11V7Z"
-                fill="currentColor"
-              />
-            </svg>
+            <ErrorIcon>
+              <svg
+                width="64"
+                height="64"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM11 15H13V17H11V15ZM11 7H13V13H11V7Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </ErrorIcon>
           ) : (
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM16.59 7.58L10 14.17L7.41 11.59L6 13L10 17L18 9L16.59 7.58Z"
-                fill="currentColor"
-              />
-            </svg>
+            <SuccessIcon>
+              <svg
+                width="64"
+                height="64"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM16.59 7.58L10 14.17L7.41 11.59L6 13L10 17L18 9L16.59 7.58Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </SuccessIcon>
           )}
-        </ProcessingIcon>
+        </StatusIconContainer>
 
         <Title>
           {error
@@ -150,7 +154,7 @@ const ProcessingView: React.FC = () => {
             : "All documents have been successfully processed."}
         </Description>
 
-        {isProcessing && (
+        {isProcessing && !files.length && (
           <ProgressContainer>
             <ProgressBar
               as={motion.div}
@@ -161,7 +165,11 @@ const ProcessingView: React.FC = () => {
           </ProgressContainer>
         )}
 
-        {error && <RetryButton onClick={handleRetry}>Try Again</RetryButton>}
+        {error && (
+          <Button variant="primary" onClick={handleRetry}>
+            Try Again
+          </Button>
+        )}
 
         {!isProcessing && !error && (
           <ProcessingSummary>
@@ -212,27 +220,21 @@ const ProcessingContent = styled.div`
   max-width: 500px;
 `;
 
-interface ProcessingIconProps {
-  isProcessing: boolean;
-}
-
-const ProcessingIcon = styled.div<ProcessingIconProps>`
-  color: ${(props) =>
-    props.isProcessing
-      ? props.theme.colors.primary
-      : props.theme.colors.success};
+const StatusIconContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80px;
   margin-bottom: ${(props) => props.theme.spacing.lg};
-  animation: ${(props) =>
-    props.isProcessing ? "spin 2s linear infinite" : "none"};
+  color: ${(props) => props.theme.colors.primary};
+`;
 
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
+const ErrorIcon = styled.div`
+  color: ${(props) => props.theme.colors.error};
+`;
+
+const SuccessIcon = styled.div`
+  color: ${(props) => props.theme.colors.success};
 `;
 
 const Title = styled.h2`
@@ -260,22 +262,6 @@ const ProgressContainer = styled.div`
 const ProgressBar = styled.div`
   height: 100%;
   background-color: ${(props) => props.theme.colors.primary};
-`;
-
-const RetryButton = styled.button`
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.xl};
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  margin-top: ${(props) => props.theme.spacing.md};
-  transition: all ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.primary}CC;
-  }
 `;
 
 const ProcessingSummary = styled.div`

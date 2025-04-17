@@ -3,6 +3,8 @@ import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useUpload } from "../../context/UploadContext";
 import TagSelector from "./TagSelector";
+// Importieren der standardisierten Button-Komponenten
+import { Button, IconButton } from "../shared/buttons";
 
 const TaggingView: React.FC = () => {
   const {
@@ -63,25 +65,35 @@ const TaggingView: React.FC = () => {
     setShowEditor(!showEditor);
   };
 
-  // Rendern der Mobile-Ansicht
+  // Rendere die Mobile-Ansicht
   if (isMobile) {
     return (
       <MobileContainer>
         <Header>
-          <BackButton onClick={goToPreviousImage}>
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 11H7.83L13.42 5.41L12 4L4 12L12 20L13.41 18.59L7.83 13H20V11Z"
-                fill="currentColor"
-              />
-            </svg>
-          </BackButton>
+          <IconButton
+            icon={
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 11H7.83L13.42 5.41L12 4L4 12L12 20L13.41 18.59L7.83 13H20V11Z"
+                  fill="currentColor"
+                />
+              </svg>
+            }
+            onClick={goToPreviousImage}
+            variant="text"
+            style={{
+              position: "absolute",
+              left: "16px",
+              top: "50%",
+              transform: "translateY(-50%)",
+            }}
+          />
           <Title>Tag Image</Title>
           <ProgressText>
             Image {currentFileIndex + 1} of {files.length}
@@ -97,20 +109,32 @@ const TaggingView: React.FC = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           />
-          <EditButton onClick={toggleEditor}>
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
-                fill="currentColor"
-              />
-            </svg>
-          </EditButton>
+          <IconButton
+            icon={
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
+                  fill="currentColor"
+                />
+              </svg>
+            }
+            onClick={toggleEditor}
+            variant="primary"
+            style={{
+              position: "absolute",
+              top: "16px",
+              right: "16px",
+              width: "40px",
+              height: "40px",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+            }}
+          />
         </ImageContainer>
 
         {showEditor ? (
@@ -122,20 +146,24 @@ const TaggingView: React.FC = () => {
           >
             <EditorHeader>
               <EditorTitle>Edit Image</EditorTitle>
-              <CloseButton onClick={toggleEditor}>
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </CloseButton>
+              <IconButton
+                icon={
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                }
+                onClick={toggleEditor}
+                variant="text"
+              />
             </EditorHeader>
             <EditorContent>
               <ComingSoonMessage>
@@ -151,15 +179,14 @@ const TaggingView: React.FC = () => {
         ) : (
           <TaggingContainer>
             <TagSelector fileId={currentFile.id} />
-            <NextButton
+            <Button
+              variant="primary"
               disabled={!hasTag}
               onClick={goToNextImage}
-              as={motion.button}
-              whileHover={hasTag ? { scale: 1.05 } : {}}
-              whileTap={hasTag ? { scale: 0.95 } : {}}
+              fullWidth
             >
               {currentFileIndex < files.length - 1 ? "Next" : "Complete"}
-            </NextButton>
+            </Button>
           </TaggingContainer>
         )}
       </MobileContainer>
@@ -178,20 +205,32 @@ const TaggingView: React.FC = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         />
-        <EditButton onClick={toggleEditor}>
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
-              fill="currentColor"
-            />
-          </svg>
-        </EditButton>
+        <IconButton
+          icon={
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
+                fill="currentColor"
+              />
+            </svg>
+          }
+          onClick={toggleEditor}
+          variant="primary"
+          style={{
+            position: "absolute",
+            top: "16px",
+            right: "16px",
+            width: "40px",
+            height: "40px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+          }}
+        />
 
         {showEditor && (
           <EditorPanel
@@ -202,20 +241,24 @@ const TaggingView: React.FC = () => {
           >
             <EditorHeader>
               <EditorTitle>Edit Image</EditorTitle>
-              <CloseButton onClick={toggleEditor}>
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </CloseButton>
+              <IconButton
+                icon={
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                }
+                onClick={toggleEditor}
+                variant="text"
+              />
             </EditorHeader>
             <EditorContent>
               <ComingSoonMessage>
@@ -242,16 +285,12 @@ const TaggingView: React.FC = () => {
         <TagSelector fileId={currentFile.id} />
 
         <NavigationButtons>
-          <BackButton onClick={goToPreviousImage}>Previous</BackButton>
-          <NextButton
-            disabled={!hasTag}
-            onClick={goToNextImage}
-            as={motion.button}
-            whileHover={hasTag ? { scale: 1.05 } : {}}
-            whileTap={hasTag ? { scale: 0.95 } : {}}
-          >
+          <Button variant="text" onClick={goToPreviousImage}>
+            Previous
+          </Button>
+          <Button variant="primary" disabled={!hasTag} onClick={goToNextImage}>
             {currentFileIndex < files.length - 1 ? "Next" : "Complete"}
-          </NextButton>
+          </Button>
         </NavigationButtons>
 
         <ThumbnailStrip>
@@ -295,20 +334,6 @@ const Header = styled.div`
   background-color: ${(props) => props.theme.colors.surface};
 `;
 
-const BackButton = styled.button`
-  position: absolute;
-  left: ${(props) => props.theme.spacing.md};
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: ${(props) => props.theme.colors.text.primary};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-`;
-
 const Title = styled.h2`
   font-size: ${(props) => props.theme.typography.fontSize.xl};
   font-weight: ${(props) => props.theme.typography.fontWeight.bold};
@@ -339,29 +364,6 @@ const PreviewImage = styled.img`
   border-radius: ${(props) => props.theme.borderRadius.md};
 `;
 
-const EditButton = styled.button`
-  position: absolute;
-  top: ${(props) => props.theme.spacing.md};
-  right: ${(props) => props.theme.spacing.md};
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: ${(props) => props.theme.colors.surface};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  color: ${(props) => props.theme.colors.text.primary};
-  cursor: pointer;
-  z-index: 1;
-  transition: all ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.primary};
-    color: ${(props) => props.theme.colors.background};
-  }
-`;
-
 const EditorContainer = styled.div`
   position: absolute;
   top: 0;
@@ -387,16 +389,6 @@ const EditorTitle = styled.h3`
   font-size: ${(props) => props.theme.typography.fontSize.lg};
   font-weight: ${(props) => props.theme.typography.fontWeight.medium};
   color: ${(props) => props.theme.colors.text.primary};
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  color: ${(props) => props.theme.colors.text.primary};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 `;
 
 const EditorContent = styled.div`
@@ -430,28 +422,6 @@ const ComingSoonMessage = styled.div`
 const TaggingContainer = styled.div`
   padding: ${(props) => props.theme.spacing.lg};
   background-color: ${(props) => props.theme.colors.surface};
-`;
-
-const Button = styled.button`
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.lg};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  transition: all ${(props) => props.theme.transitions.short};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  cursor: pointer;
-`;
-
-const NextButton = styled(Button)`
-  width: 100%;
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-  margin-top: ${(props) => props.theme.spacing.md};
-
-  &:disabled {
-    background-color: ${(props) => props.theme.colors.text.disabled};
-    cursor: not-allowed;
-  }
 `;
 
 // Styled Components für Desktop

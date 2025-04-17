@@ -1,8 +1,17 @@
+// src/components/profile/TagsManagement.tsx
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { useProfile, ProfileView } from "../../context/ProfileContext";
-import { Tag } from "../../context/UploadContext";
+import { Tag as TagType } from "../../context/UploadContext";
+
+// Importieren der standardisierten Komponenten
+import Tag from "../shared/tags/Tag";
+import { EmptyCollection } from "../shared/empty";
+import { Spinner } from "../shared/loading";
+import { Button, IconButton } from "../shared/buttons";
+import { TextField } from "../shared/inputs";
+import { ColorPicker, ColorOption } from "../shared/inputs";
 
 interface TagsManagementProps {
   onNavigate: (view: ProfileView) => void;
@@ -24,14 +33,15 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
 
   // State für den Tag-Editor
   const [editMode, setEditMode] = useState<EditMode>(null);
-  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [editingTag, setEditingTag] = useState<TagType | null>(null);
   const [tagName, setTagName] = useState("");
   const [tagColor, setTagColor] = useState("#4285F4"); // Default Blau
 
   // Lade Tags beim Mounten
   useEffect(() => {
     loadTags();
-  }, [loadTags]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Funktionen zum Zählen der Dokumente pro Tag
   const getTagUsageCount = (tagId: string) => {
@@ -47,7 +57,7 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
   };
 
   // Handler für das Öffnen des Tag-Editors für einen bestehenden Tag
-  const handleEditTag = (tag: Tag) => {
+  const handleEditTag = (tag: TagType) => {
     setEditMode("edit");
     setEditingTag(tag);
     setTagName(tag.name);
@@ -90,7 +100,7 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
   };
 
   // Verfügbare Farben für Tags
-  const colorOptions = [
+  const colorOptions: ColorOption[] = [
     { id: "blue", value: "#4285F4" },
     { id: "green", value: "#0F9D58" },
     { id: "red", value: "#DB4437" },
@@ -104,6 +114,80 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
   // Sortiere Tags alphabetisch
   const sortedTags = [...availableTags].sort((a, b) =>
     a.name.localeCompare(b.name)
+  );
+
+  // Back Icon für den Button
+  const BackIcon = () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 12H5" />
+      <path d="M12 19l-7-7 7-7" />
+    </svg>
+  );
+
+  // Add Icon für den Button
+  const AddIcon = () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+
+  // Edit Icon für den Button
+  const EditIcon = () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="m15 5 4 4" />
+    </svg>
+  );
+
+  // Delete Icon für den Button
+  const DeleteIcon = () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
   );
 
   // Rendere den Tag-Editor
@@ -124,44 +208,37 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
 
         <TagEditorForm>
           <FormGroup>
-            <FormLabel>Tag Name</FormLabel>
-            <TagNameInput
-              type="text"
+            {/* Standardisierte TextField-Komponente */}
+            <TextField
+              label="Tag Name"
               value={tagName}
               onChange={(e) => setTagName(e.target.value)}
               placeholder="Enter tag name"
               autoFocus
+              fullWidth
             />
           </FormGroup>
 
           <FormGroup>
-            <FormLabel>Tag Color</FormLabel>
-            <ColorOptionsContainer>
-              {colorOptions.map((color) => (
-                <ColorOption
-                  key={color.id}
-                  color={color.value}
-                  isSelected={tagColor === color.value}
-                  onClick={() => setTagColor(color.value)}
-                >
-                  {tagColor === color.value && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M20 6L9 17L4 12" />
-                    </svg>
-                  )}
-                </ColorOption>
-              ))}
-            </ColorOptionsContainer>
+            {/* Standardisierte ColorPicker-Komponente */}
+            <ColorPicker
+              label="Tag Color"
+              colors={colorOptions}
+              value={tagColor}
+              onChange={setTagColor}
+              size="medium"
+              fullWidth
+            />
+          </FormGroup>
+
+          {/* Beispiel für eine Tag-Vorschau mit der gemeinsamen Komponente */}
+          <FormGroup>
+            <FormLabel>Preview</FormLabel>
+            <PreviewContainer>
+              <Tag color={tagColor} isActive={true}>
+                {tagName || "Tag Name"}
+              </Tag>
+            </PreviewContainer>
           </FormGroup>
 
           {editMode === "edit" && editingTag && (
@@ -171,10 +248,17 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
           )}
 
           <TagEditorActions>
-            <CancelButton onClick={handleCancelEdit}>Cancel</CancelButton>
-            <SaveButton onClick={handleSaveTag} disabled={!tagName.trim()}>
+            {/* Standardisierte Button-Komponenten */}
+            <Button variant="text" onClick={handleCancelEdit}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSaveTag}
+              disabled={!tagName.trim()}
+            >
               Save
-            </SaveButton>
+            </Button>
           </TagEditorActions>
         </TagEditorForm>
       </TagEditorContainer>
@@ -184,39 +268,25 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
   return (
     <Container>
       <Header>
-        <BackButton onClick={() => onNavigate("home")}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M19 12H5" />
-            <path d="M12 19l-7-7 7-7" />
-          </svg>
-        </BackButton>
+        {/* Standardisierter IconTextButton für zurück */}
+        <Button
+          variant="text"
+          onClick={() => onNavigate("home")}
+          startIcon={<BackIcon />}
+        >
+          Back to Profile
+        </Button>
+
         <Title>My Tags</Title>
-        <CreateTagButton onClick={handleCreateTag}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+
+        {/* Standardisierter Button für "Add New Tag" */}
+        <Button
+          variant="primary"
+          onClick={handleCreateTag}
+          startIcon={<AddIcon />}
+        >
           Add New Tag
-        </CreateTagButton>
+        </Button>
       </Header>
 
       <AnimatePresence mode="wait">
@@ -226,14 +296,17 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
           <ContentContainer>
             {isLoading ? (
               <Loading>
-                <LoadingSpinner />
-                <LoadingText>Loading tags...</LoadingText>
+                <Spinner size="large" showLabel labelText="Loading tags..." />
               </Loading>
             ) : (
               <>
                 {sortedTags.length === 0 ? (
-                  <EmptyState>
-                    <EmptyIcon>
+                  <EmptyCollection
+                    collectionType="tags"
+                    actionText="Create First Tag"
+                    onAction={handleCreateTag}
+                    size="large"
+                    icon={
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="64"
@@ -249,29 +322,9 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
                         <path d="M6 9.01V9" />
                         <path d="m15 5 6.3 6.3a1 1 0 0 1 0 1.4l-6.3 6.3a1 1 0 0 1-1.4 0L7.7 13" />
                       </svg>
-                    </EmptyIcon>
-                    <EmptyTitle>No Tags Yet</EmptyTitle>
-                    <EmptyText>
-                      Create tags to help organize your documents. Tags can be
-                      added to documents during upload or search.
-                    </EmptyText>
-                    <CreateTagButtonLarge onClick={handleCreateTag}>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M12 5v14M5 12h14" />
-                      </svg>
-                      Create First Tag
-                    </CreateTagButtonLarge>
-                  </EmptyState>
+                    }
+                    description="Create tags to help organize your documents. Tags can be added to documents during upload or search."
+                  />
                 ) : (
                   <TagsGrid>
                     {sortedTags.map((tag) => (
@@ -292,43 +345,19 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
                           </TagCardCount>
                         </TagCardContent>
                         <TagCardActions>
-                          <TagCardButton onClick={() => handleEditTag(tag)}>
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="18"
-                              height="18"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                              <path d="m15 5 4 4" />
-                            </svg>
-                          </TagCardButton>
-                          <TagCardButton
+                          {/* Standardisierte IconButton-Komponenten */}
+                          <IconButton
+                            variant="text"
+                            onClick={() => handleEditTag(tag)}
+                            title="Edit Tag"
+                            icon={<EditIcon />}
+                          />
+                          <IconButton
+                            variant="text"
                             onClick={() => handleDeleteTag(tag.id)}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="18"
-                              height="18"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M3 6h18" />
-                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                              <line x1="10" y1="11" x2="10" y2="17" />
-                              <line x1="14" y1="11" x2="14" y2="17" />
-                            </svg>
-                          </TagCardButton>
+                            title="Delete Tag"
+                            icon={<DeleteIcon />}
+                          />
                         </TagCardActions>
                       </TagCard>
                     ))}
@@ -357,52 +386,12 @@ const Header = styled.div`
   margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
-const BackButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${(props) => props.theme.colors.text.primary};
-  margin-right: ${(props) => props.theme.spacing.md};
-  width: 40px;
-  height: 40px;
-  border-radius: ${(props) => props.theme.borderRadius.md};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.background};
-  }
-`;
-
 const Title = styled.h2`
   font-size: ${(props) => props.theme.typography.fontSize.xl};
   font-weight: ${(props) => props.theme.typography.fontWeight.bold};
   color: ${(props) => props.theme.colors.text.primary};
   flex: 1;
-`;
-
-const CreateTagButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: ${(props) => props.theme.spacing.xs};
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-  padding: ${(props) => props.theme.spacing.sm}
-    ${(props) => props.theme.spacing.md};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  transition: background-color ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) =>
-      props.theme.colors.primary}CC; /* 80% opacity */
-  }
-`;
-
-const CreateTagButtonLarge = styled(CreateTagButton)`
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.lg};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  margin-top: ${(props) => props.theme.spacing.lg};
+  margin: 0 ${(props) => props.theme.spacing.md};
 `;
 
 const ContentContainer = styled.div`
@@ -453,6 +442,7 @@ const TagCardName = styled.h3`
   font-weight: ${(props) => props.theme.typography.fontWeight.medium};
   color: ${(props) => props.theme.colors.text.primary};
   margin-bottom: ${(props) => props.theme.spacing.xs};
+  margin-top: 0;
 `;
 
 const TagCardCount = styled.div`
@@ -465,21 +455,6 @@ const TagCardActions = styled.div`
   flex-direction: column;
   padding: ${(props) => props.theme.spacing.xs};
   border-left: 1px solid ${(props) => props.theme.colors.divider};
-`;
-
-const TagCardButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: ${(props) => props.theme.borderRadius.sm};
-  color: ${(props) => props.theme.colors.text.secondary};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.background};
-    color: ${(props) => props.theme.colors.text.primary};
-  }
 `;
 
 const TagEditorContainer = styled.div`
@@ -517,48 +492,13 @@ const FormLabel = styled.label`
   color: ${(props) => props.theme.colors.text.primary};
 `;
 
-const TagNameInput = styled.input`
+// Neuer Styled Component für die Vorschau
+const PreviewContainer = styled.div`
+  display: flex;
+  align-items: center;
   padding: ${(props) => props.theme.spacing.md};
   background-color: ${(props) => props.theme.colors.background};
   border-radius: ${(props) => props.theme.borderRadius.md};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  color: ${(props) => props.theme.colors.text.primary};
-  border: 1px solid ${(props) => props.theme.colors.divider};
-  transition: border-color ${(props) => props.theme.transitions.short};
-
-  &:focus {
-    border-color: ${(props) => props.theme.colors.primary};
-  }
-`;
-
-const ColorOptionsContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${(props) => props.theme.spacing.sm};
-`;
-
-interface ColorOptionProps {
-  color: string;
-  isSelected: boolean;
-}
-
-const ColorOption = styled.button<ColorOptionProps>`
-  width: 40px;
-  height: 40px;
-  border-radius: ${(props) => props.theme.borderRadius.circle};
-  background-color: ${(props) => props.color};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  border: 2px solid ${(props) => (props.isSelected ? "white" : "transparent")};
-  box-shadow: ${(props) =>
-    props.isSelected ? `0 0 0 2px ${props.color}` : "none"};
-  transition: transform ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    transform: scale(1.1);
-  }
 `;
 
 const UsageStats = styled.div`
@@ -573,101 +513,12 @@ const TagEditorActions = styled.div`
   margin-top: ${(props) => props.theme.spacing.lg};
 `;
 
-const CancelButton = styled.button`
-  padding: ${(props) => props.theme.spacing.sm}
-    ${(props) => props.theme.spacing.lg};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  color: ${(props) => props.theme.colors.text.primary};
-  transition: background-color ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.background};
-  }
-`;
-
-const SaveButton = styled.button`
-  padding: ${(props) => props.theme.spacing.sm}
-    ${(props) => props.theme.spacing.lg};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-  transition: background-color ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) =>
-      props.theme.colors.primary}CC; /* 80% opacity */
-  }
-
-  &:disabled {
-    background-color: ${(props) => props.theme.colors.background};
-    color: ${(props) => props.theme.colors.text.disabled};
-    cursor: not-allowed;
-  }
-`;
-
 const Loading = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 300px;
-`;
-
-const LoadingSpinner = styled.div`
-  width: 40px;
-  height: 40px;
-  border: 3px solid ${(props) => props.theme.colors.background};
-  border-top: 3px solid ${(props) => props.theme.colors.primary};
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: ${(props) => props.theme.spacing.md};
-
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-`;
-
-const LoadingText = styled.div`
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  color: ${(props) => props.theme.colors.text.secondary};
-`;
-
-const EmptyState = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  height: 300px;
-  padding: ${(props) => props.theme.spacing.xl};
-`;
-
-const EmptyIcon = styled.div`
-  color: ${(props) => props.theme.colors.text.secondary};
-  margin-bottom: ${(props) => props.theme.spacing.lg};
-`;
-
-const EmptyTitle = styled.h3`
-  font-size: ${(props) => props.theme.typography.fontSize.lg};
-  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
-  color: ${(props) => props.theme.colors.text.primary};
-  margin-bottom: ${(props) => props.theme.spacing.md};
-`;
-
-const EmptyText = styled.p`
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  color: ${(props) => props.theme.colors.text.secondary};
-  max-width: 400px;
-  margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
 export default TagsManagement;

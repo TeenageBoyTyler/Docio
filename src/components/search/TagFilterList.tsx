@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { useSearch } from "../../context/SearchContext";
-import { Tag } from "../../context/UploadContext";
+import { Tag as TagType } from "../../context/UploadContext";
+// Direkter Import der Tag-Komponente
+import Tag from "../shared/tags/Tag";
 
 const TagFilterList: React.FC = () => {
   const { selectedTags, toggleTagFilter } = useSearch();
 
   // Dummy Tags für den Moment - später aus dem Upload-Kontext oder anderem Service holen
-  const [availableTags, setAvailableTags] = useState<Tag[]>([
+  const [availableTags, setAvailableTags] = useState<TagType[]>([
     { id: "tag1", name: "Invoice", color: "#4285F4" },
     { id: "tag2", name: "Receipt", color: "#0F9D58" },
     { id: "tag3", name: "Contract", color: "#DB4437" },
@@ -32,21 +34,14 @@ const TagFilterList: React.FC = () => {
       <TagsContainer>
         <AnimatePresence>
           {availableTags.map((tag) => (
-            <TagChip
+            <Tag
               key={tag.id}
               color={tag.color}
-              isSelected={selectedTags.includes(tag.name)}
+              isActive={selectedTags.includes(tag.name)}
               onClick={() => toggleTagFilter(tag.name)}
-              as={motion.div}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
             >
               {tag.name}
-            </TagChip>
+            </Tag>
           ))}
         </AnimatePresence>
       </TagsContainer>
@@ -71,35 +66,6 @@ const TagsContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: ${(props) => props.theme.spacing.sm};
-`;
-
-interface TagChipProps {
-  color: string;
-  isSelected: boolean;
-}
-
-const TagChip = styled.div<TagChipProps>`
-  background-color: ${(props) => props.color}40; // 25% opacity
-  color: ${(props) => props.color};
-  border: 2px solid
-    ${(props) => (props.isSelected ? props.color : "transparent")};
-  padding: ${(props) => props.theme.spacing.xs}
-    ${(props) => props.theme.spacing.md};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
-  cursor: pointer;
-  transition: all ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) => props.color}60; // 38% opacity
-  }
-`;
-
-const CheckIcon = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: ${(props) => props.theme.spacing.xs};
 `;
 
 export default TagFilterList;

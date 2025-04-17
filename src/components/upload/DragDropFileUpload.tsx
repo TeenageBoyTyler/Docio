@@ -2,6 +2,9 @@ import React, { useState, useRef, useCallback } from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useUpload } from "../../context/UploadContext";
+// Importieren der standardisierten Komponenten
+import { Button, IconTextButton } from "../shared/buttons";
+import { EmptyUpload } from "../shared/empty";
 
 const DragDropFileUpload: React.FC = () => {
   const { addFiles, files } = useUpload();
@@ -83,74 +86,91 @@ const DragDropFileUpload: React.FC = () => {
 
   return (
     <Container>
-      <DropZone
-        onDragEnter={handleDragEnter}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        isDragging={isDragging}
-        as={motion.div}
-        animate={{
-          backgroundColor: isDragging
-            ? "rgba(187, 134, 252, 0.1)"
-            : "transparent",
-          borderColor: isDragging
-            ? "rgba(187, 134, 252, 0.5)"
-            : "rgba(45, 45, 45, 0.5)",
-        }}
-      >
-        {showSelectionIndicator && (
+      {showSelectionIndicator ? (
+        <DropZone
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          isDragging={isDragging}
+          as={motion.div}
+          animate={{
+            backgroundColor: isDragging
+              ? "rgba(187, 134, 252, 0.1)"
+              : "transparent",
+            borderColor: isDragging
+              ? "rgba(187, 134, 252, 0.5)"
+              : "rgba(45, 45, 45, 0.5)",
+          }}
+        >
           <SelectionIndicator>
             <IndicatorText>
               {files.length} {files.length === 1 ? "file" : "files"} selected
             </IndicatorText>
-            <ViewSelectionButton onClick={() => console.log("View selection")}>
-              View Selection
-            </ViewSelectionButton>
-          </SelectionIndicator>
-        )}
-
-        <ContentWrapper>
-          <UploadIcon as={motion.div} animate={{ scale: isDragging ? 1.1 : 1 }}>
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+            <Button
+              variant="text"
+              onClick={() => console.log("View selection")}
             >
-              <path
-                d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04ZM19 18H6C3.79 18 2 16.21 2 14C2 11.95 3.53 10.24 5.56 10.03L6.63 9.92L7.13 8.97C8.08 7.14 9.94 6 12 6C14.62 6 16.88 7.86 17.39 10.43L17.69 11.93L19.22 12.04C20.78 12.14 22 13.45 22 15C22 16.65 20.65 18 19 18ZM8 13H10.55V16H13.45V13H16L12 9L8 13Z"
-                fill="currentColor"
-              />
-            </svg>
-          </UploadIcon>
+              View Selection
+            </Button>
+          </SelectionIndicator>
 
-          <Title>Upload Documents</Title>
+          <ContentWrapper>
+            <UploadIcon
+              as={motion.div}
+              animate={{ scale: isDragging ? 1.1 : 1 }}
+            >
+              <svg
+                width="64"
+                height="64"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04ZM19 18H6C3.79 18 2 16.21 2 14C2 11.95 3.53 10.24 5.56 10.03L6.63 9.92L7.13 8.97C8.08 7.14 9.94 6 12 6C14.62 6 16.88 7.86 17.39 10.43L17.69 11.93L19.22 12.04C20.78 12.14 22 13.45 22 15C22 16.65 20.65 18 19 18ZM8 13H10.55V16H13.45V13H16L12 9L8 13Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </UploadIcon>
 
-          <Description>
-            {isDragging
-              ? "Drop files here..."
-              : "Drag and drop files here or use the buttons below"}
-          </Description>
+            <Title>Upload Documents</Title>
 
-          <ButtonGroup>
-            <SelectFilesButton onClick={handleFileSelect}>
-              Select Files
-            </SelectFilesButton>
+            <Description>
+              {isDragging
+                ? "Drop files here..."
+                : "Drag and drop files here or use the buttons below"}
+            </Description>
 
-            {isMobile && (
-              <TakePhotoButton onClick={handleCameraCapture}>
-                Take Photo
-              </TakePhotoButton>
-            )}
-          </ButtonGroup>
+            <ButtonGroup>
+              <Button variant="primary" onClick={handleFileSelect}>
+                Select Files
+              </Button>
 
-          <SupportedFormats>
-            Supported formats: JPG, PNG, GIF, PDF, HEIC, HEIF
-          </SupportedFormats>
-        </ContentWrapper>
-      </DropZone>
+              {isMobile && (
+                <Button variant="text" onClick={handleCameraCapture}>
+                  Take Photo
+                </Button>
+              )}
+            </ButtonGroup>
+
+            <SupportedFormats>
+              Supported formats: JPG, PNG, GIF, PDF, HEIC, HEIF
+            </SupportedFormats>
+          </ContentWrapper>
+        </DropZone>
+      ) : (
+        <EmptyUpload
+          onSelectFiles={handleFileSelect}
+          onDrag={setIsDragging}
+          isDragging={isDragging}
+          dragEnabled={true}
+          customTitle="Upload Documents"
+          customDescription="Drag and drop files here or select them using the button below"
+          secondaryActionText={isMobile ? "Take Photo" : undefined}
+          onSecondaryAction={isMobile ? handleCameraCapture : undefined}
+        />
+      )}
 
       <input
         type="file"
@@ -164,7 +184,7 @@ const DragDropFileUpload: React.FC = () => {
   );
 };
 
-// Styled Components
+// Styled Components - nur noch für den Fall, wenn bereits Dateien ausgewählt wurden
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -236,35 +256,6 @@ const ButtonGroup = styled.div`
   }
 `;
 
-const Button = styled.button`
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.xl};
-  border-radius: 4px;
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  transition: all ${(props) => props.theme.transitions.short};
-  cursor: pointer;
-`;
-
-const SelectFilesButton = styled(Button)`
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.primary}CC;
-  }
-`;
-
-const TakePhotoButton = styled(Button)`
-  background-color: transparent;
-  color: ${(props) => props.theme.colors.text.primary};
-  border: 1px solid ${(props) => props.theme.colors.divider};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.background};
-  }
-`;
-
 const SupportedFormats = styled.p`
   font-size: ${(props) => props.theme.typography.fontSize.sm};
   color: ${(props) => props.theme.colors.text.disabled};
@@ -286,19 +277,6 @@ const SelectionIndicator = styled.div`
 const IndicatorText = styled.span`
   font-size: ${(props) => props.theme.typography.fontSize.md};
   color: ${(props) => props.theme.colors.text.primary};
-`;
-
-const ViewSelectionButton = styled.button`
-  background: none;
-  border: none;
-  color: ${(props) => props.theme.colors.primary};
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-  }
 `;
 
 export default DragDropFileUpload;

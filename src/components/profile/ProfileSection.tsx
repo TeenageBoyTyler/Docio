@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+// src/components/profile/ProfileSection.tsx
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { useProfile, ProfileView } from "../../context/ProfileContext";
@@ -8,6 +9,7 @@ import ProfileHome from "./ProfileHome";
 import DocumentsArchive from "./DocumentsArchive";
 import TagsManagement from "./TagsManagement";
 import ProcessingSettings from "./ProcessingSettings";
+import CloudProviderSelector from "./CloudProviderSelector";
 
 const ProfileSection: React.FC = () => {
   const {
@@ -19,6 +21,9 @@ const ProfileSection: React.FC = () => {
     tagCount,
     connectToCloud,
   } = useProfile();
+
+  // State für den Cloud-Provider-Selector
+  const [showProviderSelector, setShowProviderSelector] = useState(false);
 
   // Animation-Varianten für die Seitenübergänge
   const pageVariants = {
@@ -66,9 +71,29 @@ const ProfileSection: React.FC = () => {
             Connect to a cloud storage provider to store your documents securely
             and access all features.
           </EmptyStateText>
-          <ConnectButton onClick={() => connectToCloud("Dropbox")}>
-            Connect to Dropbox
-          </ConnectButton>
+          <ButtonGroup>
+            <ConnectButton onClick={() => setShowProviderSelector(true)}>
+              Select Provider
+            </ConnectButton>
+          </ButtonGroup>
+
+          <AnimatePresence>
+            {showProviderSelector && (
+              <ModalOverlay
+                as={motion.div}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowProviderSelector(false)}
+              >
+                <ModalContent onClick={(e) => e.stopPropagation()}>
+                  <CloudProviderSelector
+                    onClose={() => setShowProviderSelector(false)}
+                  />
+                </ModalContent>
+              </ModalOverlay>
+            )}
+          </AnimatePresence>
         </EmptyStateContainer>
       </Container>
     );
@@ -88,6 +113,36 @@ const ProfileSection: React.FC = () => {
             variants={pageVariants}
             transition={{ type: "tween", duration: 0.3 }}
           >
+            <ProfileActionBar>
+              <ProviderButton onClick={() => setShowProviderSelector(true)}>
+                <ProviderIcon>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 10c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"></path>
+                    <path d="M12 18c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"></path>
+                    <path d="M18 12c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path>
+                    <path d="M6 12c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path>
+                    <path d="M12 6c.3 0 .5-.1.7-.3.4-.4.4-1 0-1.4C12.5 4.1 12.3 4 12 4c-.3 0-.5.1-.7.3-.4.4-.4 1 0 1.4.2.2.4.3.7.3z"></path>
+                    <path d="M18 8c.3 0 .5-.1.7-.3.4-.4.4-1 0-1.4-.2-.2-.4-.3-.7-.3-.3 0-.5.1-.7.3-.4.4-.4 1 0 1.4.2.2.4.3.7.3z"></path>
+                    <path d="M18 16c-.3 0-.5.1-.7.3-.4.4-.4 1 0 1.4.2.2.4.3.7.3.3 0 .5-.1.7-.3.4-.4.4-1 0-1.4-.2-.2-.4-.3-.7-.3z"></path>
+                    <path d="M6 16c-.3 0-.5.1-.7.3-.4.4-.4 1 0 1.4.2.2.4.3.7.3.3 0 .5-.1.7-.3.4-.4.4-1 0-1.4-.2-.2-.4-.3-.7-.3z"></path>
+                    <path d="M12 18c-.3 0-.5.1-.7.3-.4.4-.4 1 0 1.4.2.2.4.3.7.3.3 0 .5-.1.7-.3.4-.4.4-1 0-1.4-.2-.2-.4-.3-.7-.3z"></path>
+                    <path d="M16.24 7.76l-4.47 4.47"></path>
+                    <path d="M7.76 16.24l4.47-4.47"></path>
+                  </svg>
+                </ProviderIcon>
+                Change Provider
+              </ProviderButton>
+            </ProfileActionBar>
             <ProfileHome onNavigate={setCurrentView} />
           </PageContainer>
         )}
@@ -134,6 +189,24 @@ const ProfileSection: React.FC = () => {
           </PageContainer>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showProviderSelector && (
+          <ModalOverlay
+            as={motion.div}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowProviderSelector(false)}
+          >
+            <ModalContent onClick={(e) => e.stopPropagation()}>
+              <CloudProviderSelector
+                onClose={() => setShowProviderSelector(false)}
+              />
+            </ModalContent>
+          </ModalOverlay>
+        )}
+      </AnimatePresence>
     </Container>
   );
 };
@@ -146,6 +219,7 @@ const Container = styled.div`
   width: 100%;
   overflow: hidden;
   background-color: ${(props) => props.theme.colors.background};
+  position: relative;
 `;
 
 const PageContainer = styled.div`
@@ -173,6 +247,35 @@ const PageContainer = styled.div`
   &::-webkit-scrollbar-thumb:hover {
     background: ${(props) => props.theme.colors.text.disabled};
   }
+`;
+
+const ProfileActionBar = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: ${(props) => props.theme.spacing.md};
+`;
+
+const ProviderButton = styled.button`
+  display: flex;
+  align-items: center;
+  background-color: transparent;
+  color: ${(props) => props.theme.colors.text.secondary};
+  padding: ${(props) => props.theme.spacing.xs}
+    ${(props) => props.theme.spacing.sm};
+  font-size: ${(props) => props.theme.typography.fontSize.sm};
+  border-radius: ${(props) => props.theme.borderRadius.sm};
+  border: 1px solid ${(props) => props.theme.colors.divider};
+
+  &:hover {
+    background-color: ${(props) => props.theme.colors.background};
+    color: ${(props) => props.theme.colors.text.primary};
+  }
+`;
+
+const ProviderIcon = styled.div`
+  display: flex;
+  align-items: center;
+  margin-right: ${(props) => props.theme.spacing.xs};
 `;
 
 const EmptyStateContainer = styled.div`
@@ -204,6 +307,11 @@ const EmptyStateText = styled.p`
   margin-bottom: ${(props) => props.theme.spacing.xl};
 `;
 
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: ${(props) => props.theme.spacing.md};
+`;
+
 const ConnectButton = styled.button`
   background-color: ${(props) => props.theme.colors.primary};
   color: ${(props) => props.theme.colors.background};
@@ -218,6 +326,25 @@ const ConnectButton = styled.button`
     background-color: ${(props) =>
       props.theme.colors.primary}CC; /* 80% opacity */
   }
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: ${(props) => props.theme.spacing.lg};
+`;
+
+const ModalContent = styled.div`
+  max-width: 90%;
+  max-height: 90%;
 `;
 
 export default ProfileSection;

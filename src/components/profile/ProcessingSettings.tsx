@@ -6,6 +6,8 @@ import {
   ProfileView,
   ApiConfig,
 } from "../../context/ProfileContext";
+import { Button } from "../shared/buttons";
+import { RadioButton, PasswordField, Checkbox } from "../shared/inputs";
 
 interface ProcessingSettingsProps {
   onNavigate: (view: ProfileView) => void;
@@ -171,13 +173,15 @@ const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
 
               <ApiDescription>{provider.description}</ApiDescription>
 
-              <ApiKeyInput
-                type="password"
+              {/* Ersetzen des standard inputs mit PasswordField */}
+              <PasswordField
+                label={`${provider.name} API Key`}
                 value={apiKeys[provider.id] || ""}
                 onChange={(e) =>
                   handleApiKeyChange(provider.id, e.target.value)
                 }
                 placeholder={`Enter ${provider.name} API key`}
+                fullWidth
               />
 
               <ApiCardActions>
@@ -234,6 +238,7 @@ const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
             <path d="M19 12H5" />
             <path d="M12 19l-7-7 7-7" />
           </svg>
+          <BackButtonText>Back to Profile</BackButtonText>
         </BackButton>
         <Title>Processing Settings</Title>
       </Header>
@@ -248,7 +253,7 @@ const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
         <ProcessingOptions>
           <ProcessingOption
             isActive={processingMethod === "client-side"}
-            onClick={() => handleProcessingMethodChange("client-side")}
+            isStatic={true}
           >
             <ProcessingOptionHeader>
               <ProcessingOptionTitle>
@@ -287,6 +292,17 @@ const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
 
             {renderProcessingBenefits("client-side")}
 
+            {/* Hier die standardisierte RadioButton-Komponente verwenden */}
+            <div onClick={() => handleProcessingMethodChange("client-side")}>
+              <RadioButton
+                name="processingMethod"
+                value="client-side"
+                checked={processingMethod === "client-side"}
+                onChange={() => handleProcessingMethodChange("client-side")}
+                label="Use client-side processing"
+              />
+            </div>
+
             <ActiveIndicator isActive={processingMethod === "client-side"}>
               {processingMethod === "client-side" && "Currently Active"}
             </ActiveIndicator>
@@ -294,7 +310,7 @@ const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
 
           <ProcessingOption
             isActive={processingMethod === "api"}
-            onClick={() => handleProcessingMethodChange("api")}
+            isStatic={true}
           >
             <ProcessingOptionHeader>
               <ProcessingOptionTitle>
@@ -323,6 +339,17 @@ const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
 
             {renderProcessingBenefits("api")}
 
+            {/* Hier die standardisierte RadioButton-Komponente verwenden */}
+            <div onClick={() => handleProcessingMethodChange("api")}>
+              <RadioButton
+                name="processingMethod"
+                value="api"
+                checked={processingMethod === "api"}
+                onChange={() => handleProcessingMethodChange("api")}
+                label="Use API processing"
+              />
+            </div>
+
             <ActiveIndicator isActive={processingMethod === "api"}>
               {processingMethod === "api" && "Currently Active"}
             </ActiveIndicator>
@@ -339,6 +366,28 @@ const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
 
         {renderApiSettings()}
       </SettingsSection>
+
+      <AdvancedOptionsSection>
+        <SectionTitle>Advanced Options</SectionTitle>
+
+        <CheckboxGroup>
+          <Checkbox
+            label="Enable OCR for all documents"
+            helperText="Automatically perform text extraction on all documents"
+          />
+
+          <Checkbox
+            label="Enable image analysis for all documents"
+            helperText="Automatically identify objects and concepts in images"
+          />
+
+          <Checkbox
+            label="Cache processing results"
+            helperText="Store processed documents locally for faster results"
+            checked={true}
+          />
+        </CheckboxGroup>
+      </AdvancedOptionsSection>
 
       <ResetSection>
         <ResetButton>Reset to Default Settings</ResetButton>
@@ -370,13 +419,18 @@ const BackButton = styled.button`
   justify-content: center;
   color: ${(props) => props.theme.colors.text.primary};
   margin-right: ${(props) => props.theme.spacing.md};
-  width: 40px;
-  height: 40px;
+  padding: ${(props) => props.theme.spacing.xs}
+    ${(props) => props.theme.spacing.sm};
   border-radius: ${(props) => props.theme.borderRadius.md};
 
   &:hover {
     background-color: ${(props) => props.theme.colors.background};
   }
+`;
+
+const BackButtonText = styled.span`
+  margin-left: ${(props) => props.theme.spacing.xs};
+  font-size: ${(props) => props.theme.typography.fontSize.sm};
 `;
 
 const Title = styled.h2`
@@ -414,6 +468,7 @@ const ProcessingOptions = styled.div`
 
 interface ProcessingOptionProps {
   isActive: boolean;
+  isStatic: boolean;
 }
 
 const ProcessingOption = styled.div<ProcessingOptionProps>`
@@ -422,15 +477,9 @@ const ProcessingOption = styled.div<ProcessingOptionProps>`
   background-color: ${(props) => props.theme.colors.surface};
   border-radius: ${(props) => props.theme.borderRadius.md};
   padding: ${(props) => props.theme.spacing.lg};
-  cursor: pointer;
   border: 2px solid
     ${(props) => (props.isActive ? props.theme.colors.primary : "transparent")};
-  transition: border-color ${(props) => props.theme.transitions.short},
-    transform ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    transform: translateY(-2px);
-  }
+  transition: border-color ${(props) => props.theme.transitions.short};
 `;
 
 const ProcessingOptionHeader = styled.div`
@@ -536,31 +585,13 @@ const ApiDescription = styled.p`
   margin-bottom: ${(props) => props.theme.spacing.md};
 `;
 
-const ApiKeyInput = styled.input`
-  width: 100%;
-  padding: ${(props) => props.theme.spacing.md};
-  background-color: ${(props) => props.theme.colors.background};
-  border: 1px solid ${(props) => props.theme.colors.divider};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  color: ${(props) => props.theme.colors.text.primary};
-  margin-bottom: ${(props) => props.theme.spacing.md};
-
-  &:focus {
-    border-color: ${(props) => props.theme.colors.primary};
-  }
-
-  &::placeholder {
-    color: ${(props) => props.theme.colors.text.disabled};
-  }
-`;
-
 const ApiCardActions = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: ${(props) => props.theme.spacing.md};
+  margin-top: ${(props) => props.theme.spacing.md};
 `;
 
 const ApiLink = styled.a`
@@ -618,6 +649,19 @@ const SaveButton = styled.button`
     opacity: 0.5;
     cursor: not-allowed;
   }
+`;
+
+const AdvancedOptionsSection = styled.section`
+  margin-bottom: ${(props) => props.theme.spacing.xl};
+  background-color: ${(props) => props.theme.colors.surface};
+  border-radius: ${(props) => props.theme.borderRadius.md};
+  padding: ${(props) => props.theme.spacing.lg};
+`;
+
+const CheckboxGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${(props) => props.theme.spacing.md};
 `;
 
 const ResetSection = styled.div`

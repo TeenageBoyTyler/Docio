@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { motion } from "framer-motion";
 import { useSearch } from "../../context/SearchContext";
+// Importieren der standardisierten Komponenten
+import { Button, IconTextButton } from "../shared/buttons";
+import { Spinner, LoadingOverlay, LoadingText } from "../shared/loading";
 
 const PdfCreationView: React.FC = () => {
   const {
@@ -60,22 +62,8 @@ const PdfCreationView: React.FC = () => {
     if (isLoading) {
       return (
         <ProcessingContainer>
-          <ProcessingIcon>
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z"
-                fill="currentColor"
-              />
-              <path d="M12 6V12L16 14" fill="currentColor" />
-            </svg>
-          </ProcessingIcon>
-          <ProcessingTitle>PDF wird erstellt...</ProcessingTitle>
+          {/* Standardisierte Spinner-Komponente verwenden */}
+          <Spinner size="large" showLabel labelText="PDF wird erstellt..." />
           <ProcessingText>
             Dokumente werden zusammengeführt und formatiert.
           </ProcessingText>
@@ -102,14 +90,15 @@ const PdfCreationView: React.FC = () => {
           </ErrorIcon>
           <ErrorTitle>Fehler bei der PDF-Erstellung</ErrorTitle>
           <ErrorText>{error}</ErrorText>
-          <RetryButton
+          <Button
+            variant="primary"
             onClick={() => {
               setError(null);
               setPdfUrl(null);
             }}
           >
             Erneut versuchen
-          </RetryButton>
+          </Button>
         </ErrorContainer>
       );
     }
@@ -141,13 +130,8 @@ const PdfCreationView: React.FC = () => {
           </SuccessText>
 
           <ButtonGroup>
-            <DownloadButton
-              onClick={handleDownload}
-              as={motion.button}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <DownloadIcon>
+            <IconTextButton
+              icon={
                 <svg
                   width="24"
                   height="24"
@@ -160,18 +144,16 @@ const PdfCreationView: React.FC = () => {
                     fill="currentColor"
                   />
                 </svg>
-              </DownloadIcon>
-              PDF herunterladen
-            </DownloadButton>
-
-            <NewSearchButton
-              onClick={handleNewSearch}
-              as={motion.button}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              }
+              onClick={handleDownload}
+              variant="primary"
             >
+              PDF herunterladen
+            </IconTextButton>
+
+            <Button variant="text" onClick={handleNewSearch}>
               Neue Suche starten
-            </NewSearchButton>
+            </Button>
           </ButtonGroup>
         </SuccessContainer>
       );
@@ -180,16 +162,27 @@ const PdfCreationView: React.FC = () => {
     // Fallback, wenn noch kein Zustand festgelegt ist
     return (
       <ProcessingContainer>
-        <ProcessingText>Initialisiere PDF-Erstellung...</ProcessingText>
+        {/* Standardisierte LoadingText-Komponente verwenden */}
+        <LoadingText text="Initialisiere PDF-Erstellung" size="medium" />
       </ProcessingContainer>
     );
   };
 
   return (
     <Container>
+      {/* LoadingOverlay für den gesamten Prozess, wenn isLoading true ist */}
+      <LoadingOverlay
+        isVisible={isLoading && selectedDocuments.length > 3}
+        text="PDF wird erstellt..."
+        blockInteraction={true}
+        opacity={0.7}
+      />
+
       <Header>
-        <BackButton onClick={goToPreviousStep}>
-          <BackIcon>
+        <Button
+          variant="text"
+          onClick={goToPreviousStep}
+          startIcon={
             <svg
               width="24"
               height="24"
@@ -202,9 +195,10 @@ const PdfCreationView: React.FC = () => {
                 fill="currentColor"
               />
             </svg>
-          </BackIcon>
+          }
+        >
           Zurück
-        </BackButton>
+        </Button>
         <Title>PDF erstellen</Title>
       </Header>
 
@@ -228,25 +222,6 @@ const Header = styled.div`
   margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
-const BackButton = styled.button`
-  display: flex;
-  align-items: center;
-  color: ${(props) => props.theme.colors.text.secondary};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  transition: color ${(props) => props.theme.transitions.short};
-  margin-right: ${(props) => props.theme.spacing.lg};
-
-  &:hover {
-    color: ${(props) => props.theme.colors.text.primary};
-  }
-`;
-
-const BackIcon = styled.div`
-  display: flex;
-  align-items: center;
-  margin-right: ${(props) => props.theme.spacing.xs};
-`;
-
 const Title = styled.h2`
   font-size: ${(props) => props.theme.typography.fontSize.xl};
   font-weight: ${(props) => props.theme.typography.fontWeight.bold};
@@ -268,28 +243,7 @@ const ProcessingContainer = styled.div`
   align-items: center;
   text-align: center;
   max-width: 400px;
-`;
-
-const ProcessingIcon = styled.div`
-  color: ${(props) => props.theme.colors.primary};
-  margin-bottom: ${(props) => props.theme.spacing.lg};
-  animation: spin 2s linear infinite;
-
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-`;
-
-const ProcessingTitle = styled.h3`
-  font-size: ${(props) => props.theme.typography.fontSize.xl};
-  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
-  color: ${(props) => props.theme.colors.text.primary};
-  margin-bottom: ${(props) => props.theme.spacing.md};
+  gap: ${(props) => props.theme.spacing.lg};
 `;
 
 const ProcessingText = styled.p`
@@ -324,21 +278,6 @@ const ErrorText = styled.p`
   margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
-const RetryButton = styled.button`
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.xl};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  transition: all ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.primary}CC;
-  }
-`;
-
 // Success Components
 const SuccessContainer = styled.div`
   display: flex;
@@ -371,45 +310,6 @@ const ButtonGroup = styled.div`
   flex-direction: column;
   gap: ${(props) => props.theme.spacing.md};
   width: 100%;
-`;
-
-const DownloadButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.xl};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  transition: all ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.primary}CC;
-  }
-`;
-
-const DownloadIcon = styled.div`
-  display: flex;
-  align-items: center;
-  margin-right: ${(props) => props.theme.spacing.sm};
-`;
-
-const NewSearchButton = styled.button`
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.xl};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  background: transparent;
-  border: 1px solid ${(props) => props.theme.colors.divider};
-  color: ${(props) => props.theme.colors.text.primary};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  transition: all ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.background};
-  }
 `;
 
 export default PdfCreationView;

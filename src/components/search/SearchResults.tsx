@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSearch } from "../../context/SearchContext";
 import { SearchResult } from "../../services/searchService";
 import { loadPreviewsForResults } from "../../services/searchService";
+// Importieren der standardisierten Komponenten
+import { Button, IconTextButton } from "../shared/buttons";
+import { EmptySearch } from "../shared/empty";
 
 // In einer vollständigen Implementierung würden wir react-window für die Virtualisierung verwenden
 // Für jetzt implementieren wir eine einfache Version ohne Virtualisierung
@@ -16,6 +19,7 @@ const SearchResults: React.FC = () => {
     goToNextStep,
     goToPreviousStep,
     isLoading,
+    searchQuery, // Wir benötigen den searchQuery für die EmptySearch-Komponente
   } = useSearch();
 
   const [resultsWithPreviews, setResultsWithPreviews] = useState<
@@ -77,27 +81,12 @@ const SearchResults: React.FC = () => {
   if (results.length === 0 && !isLoading) {
     return (
       <Container>
-        <NoResultsMessage>
-          <NoResultsIcon>
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14Z"
-                fill="currentColor"
-              />
-            </svg>
-          </NoResultsIcon>
-          <NoResultsTitle>Keine Ergebnisse gefunden</NoResultsTitle>
-          <NoResultsText>
-            Bitte versuchen Sie es mit anderen Suchbegriffen oder Filtern.
-          </NoResultsText>
-          <BackButton onClick={goToPreviousStep}>Zurück zur Suche</BackButton>
-        </NoResultsMessage>
+        <EmptySearch
+          searchTerm={searchQuery}
+          onBackToSearch={goToPreviousStep}
+          description="Bitte versuchen Sie es mit anderen Suchbegriffen oder Filtern."
+          primaryActionText="Zurück zur Suche"
+        />
       </Container>
     );
   }
@@ -105,8 +94,10 @@ const SearchResults: React.FC = () => {
   return (
     <Container>
       <Header>
-        <BackButton onClick={goToPreviousStep}>
-          <BackIcon>
+        <Button
+          variant="text"
+          onClick={goToPreviousStep}
+          startIcon={
             <svg
               width="24"
               height="24"
@@ -119,9 +110,10 @@ const SearchResults: React.FC = () => {
                 fill="currentColor"
               />
             </svg>
-          </BackIcon>
+          }
+        >
           Zurück
-        </BackButton>
+        </Button>
         <ResultsCount>
           {results.length} {results.length === 1 ? "Ergebnis" : "Ergebnisse"}{" "}
           gefunden
@@ -196,14 +188,8 @@ const SearchResults: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 50 }}
         >
-          <ProceedButton
-            onClick={handleProceed}
-            as={motion.button}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            Weiter
-            <ProceedIcon>
+          <IconTextButton
+            icon={
               <svg
                 width="24"
                 height="24"
@@ -216,8 +202,13 @@ const SearchResults: React.FC = () => {
                   fill="currentColor"
                 />
               </svg>
-            </ProceedIcon>
-          </ProceedButton>
+            }
+            onClick={handleProceed}
+            variant="primary"
+            iconPosition="right"
+          >
+            Weiter
+          </IconTextButton>
         </ProceedButtonContainer>
       )}
     </Container>
@@ -244,24 +235,6 @@ const Header = styled.div`
     align-items: flex-start;
     gap: ${(props) => props.theme.spacing.sm};
   }
-`;
-
-const BackButton = styled.button`
-  display: flex;
-  align-items: center;
-  color: ${(props) => props.theme.colors.text.secondary};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  transition: color ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    color: ${(props) => props.theme.colors.text.primary};
-  }
-`;
-
-const BackIcon = styled.div`
-  display: flex;
-  align-items: center;
-  margin-right: ${(props) => props.theme.spacing.xs};
 `;
 
 const ResultsCount = styled.span`
@@ -372,60 +345,6 @@ const ProceedButtonContainer = styled.div`
   width: 100%;
   padding: ${(props) => props.theme.spacing.md} 0;
   z-index: ${(props) => props.theme.zIndex.elevated};
-`;
-
-const ProceedButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.xl};
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  box-shadow: 0 4px 8px ${(props) => props.theme.colors.shadow};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.primary}CC;
-  }
-`;
-
-const ProceedIcon = styled.div`
-  display: flex;
-  align-items: center;
-  margin-left: ${(props) => props.theme.spacing.sm};
-`;
-
-// "Keine Ergebnisse" Komponenten
-const NoResultsMessage = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: ${(props) => props.theme.spacing.xl};
-  margin: auto;
-  max-width: 400px;
-`;
-
-const NoResultsIcon = styled.div`
-  color: ${(props) => props.theme.colors.text.disabled};
-  margin-bottom: ${(props) => props.theme.spacing.lg};
-`;
-
-const NoResultsTitle = styled.h3`
-  font-size: ${(props) => props.theme.typography.fontSize.xl};
-  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
-  color: ${(props) => props.theme.colors.text.primary};
-  margin-bottom: ${(props) => props.theme.spacing.md};
-`;
-
-const NoResultsText = styled.p`
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  color: ${(props) => props.theme.colors.text.secondary};
-  margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
 export default SearchResults;

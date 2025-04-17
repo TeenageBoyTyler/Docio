@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useSearch } from "../../context/SearchContext";
+// Importieren der standardisierten Komponenten
+import { Button } from "../shared/buttons";
+import { EmptySelection } from "../shared/empty";
 
 const SelectionActions: React.FC = () => {
   const { selectedDocuments, goToPreviousStep, goToNextStep, goToStep } =
@@ -21,11 +24,52 @@ const SelectionActions: React.FC = () => {
     goToNextStep(); // Weiter zur PDF-Erstellung
   };
 
+  // Wenn keine Dokumente ausgewählt sind, zeigen wir den EmptySelection-Zustand an
+  if (selectedDocuments.length === 0) {
+    return (
+      <Container>
+        <Header>
+          <Button
+            variant="text"
+            onClick={goToPreviousStep}
+            startIcon={
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M20 11H7.83L13.42 5.41L12 4L4 12L12 20L13.41 18.59L7.83 13H20V11Z"
+                  fill="currentColor"
+                />
+              </svg>
+            }
+          >
+            Zurück
+          </Button>
+          <Title>Document Selection</Title>
+        </Header>
+
+        <EmptySelection
+          itemType="documents"
+          onAction={goToPreviousStep}
+          actionText="Back to Search Results"
+          size="large"
+          customDescription="Select one or more documents from the search results to create a PDF."
+        />
+      </Container>
+    );
+  }
+
   return (
     <Container>
       <Header>
-        <BackButton onClick={goToPreviousStep}>
-          <BackIcon>
+        <Button
+          variant="text"
+          onClick={goToPreviousStep}
+          startIcon={
             <svg
               width="24"
               height="24"
@@ -38,9 +82,10 @@ const SelectionActions: React.FC = () => {
                 fill="currentColor"
               />
             </svg>
-          </BackIcon>
+          }
+        >
           Zurück
-        </BackButton>
+        </Button>
         <Title>Ausgewählte Dokumente</Title>
       </Header>
 
@@ -131,23 +176,13 @@ const SelectionActions: React.FC = () => {
 
       {/* Aktions-Buttons */}
       <ActionsContainer>
-        <SecondaryButton
-          onClick={handleAddMore}
-          as={motion.button}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
+        <Button variant="text" onClick={handleAddMore}>
           Mehr hinzufügen
-        </SecondaryButton>
+        </Button>
 
-        <PrimaryButton
-          onClick={handleCreatePdf}
-          as={motion.button}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
+        <Button variant="primary" onClick={handleCreatePdf}>
           PDF erstellen
-        </PrimaryButton>
+        </Button>
       </ActionsContainer>
     </Container>
   );
@@ -166,25 +201,6 @@ const Header = styled.div`
   display: flex;
   align-items: center;
   margin-bottom: ${(props) => props.theme.spacing.lg};
-`;
-
-const BackButton = styled.button`
-  display: flex;
-  align-items: center;
-  color: ${(props) => props.theme.colors.text.secondary};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  transition: color ${(props) => props.theme.transitions.short};
-  margin-right: ${(props) => props.theme.spacing.lg};
-
-  &:hover {
-    color: ${(props) => props.theme.colors.text.primary};
-  }
-`;
-
-const BackIcon = styled.div`
-  display: flex;
-  align-items: center;
-  margin-right: ${(props) => props.theme.spacing.xs};
 `;
 
 const Title = styled.h2`
@@ -308,36 +324,6 @@ const ActionsContainer = styled.div`
 
   @media (max-width: ${(props) => props.theme.breakpoints.sm}) {
     flex-direction: column;
-  }
-`;
-
-const SecondaryButton = styled.button`
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.xl};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  background: transparent;
-  border: 1px solid ${(props) => props.theme.colors.divider};
-  color: ${(props) => props.theme.colors.text.primary};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  transition: all ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.background};
-  }
-`;
-
-const PrimaryButton = styled.button`
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.xl};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  transition: all ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.primary}CC;
   }
 `;
 

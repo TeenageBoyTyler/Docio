@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
-import { useUpload, Tag } from "../../context/UploadContext";
-import ColorPicker from "./ColorPicker";
+import { useUpload, Tag as TagType } from "../../context/UploadContext";
+// Direkter Import der Tag-Komponente
+import Tag from "../shared/tags/Tag";
+// Import der standardisierten ColorPicker-Komponente
+import { ColorPicker } from "../shared/inputs";
 
 interface TagSelectorProps {
   fileId: string;
@@ -20,7 +23,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({ fileId }) => {
   const fileTags = currentFile?.tags || [];
 
   // Tag hinzufügen oder entfernen
-  const toggleTag = (tag: Tag) => {
+  const toggleTag = (tag: TagType) => {
     const hasTag = fileTags.some((t) => t.id === tag.id);
 
     if (hasTag) {
@@ -40,6 +43,11 @@ const TagSelector: React.FC<TagSelectorProps> = ({ fileId }) => {
     }
   };
 
+  // Farbauswahl abbrechen
+  const handleCancelColorPicker = () => {
+    setShowColorPicker(false);
+  };
+
   return (
     <Container>
       <TagSectionTitle>Tags</TagSectionTitle>
@@ -49,17 +57,14 @@ const TagSelector: React.FC<TagSelectorProps> = ({ fileId }) => {
         {availableTags.map((tag) => {
           const isSelected = fileTags.some((t) => t.id === tag.id);
           return (
-            <TagChip
+            <Tag
               key={tag.id}
               color={tag.color}
-              isSelected={isSelected}
+              isActive={isSelected}
               onClick={() => toggleTag(tag)}
-              as={motion.div}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
             >
               {tag.name}
-            </TagChip>
+            </Tag>
           );
         })}
       </TagsGrid>
@@ -84,9 +89,11 @@ const TagSelector: React.FC<TagSelectorProps> = ({ fileId }) => {
               autoFocus
             />
             <AnimatePresence>
+              {/* Standardisierte ColorPicker-Komponente */}
               <ColorPicker
                 onSelectColor={handleCreateTag}
-                onCancel={() => setShowColorPicker(false)}
+                onCancel={handleCancelColorPicker}
+                label="Select a color for your tag:"
               />
             </AnimatePresence>
           </TagCreationContainer>
@@ -123,28 +130,6 @@ const TagsGrid = styled.div`
   margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
-interface TagChipProps {
-  color: string;
-  isSelected: boolean;
-}
-
-const TagChip = styled.div<TagChipProps>`
-  background-color: ${(props) => props.color}40; // 25% opacity
-  color: ${(props) => props.color};
-  border: 2px solid
-    ${(props) => (props.isSelected ? props.color : "transparent")};
-  padding: ${(props) => props.theme.spacing.xs}
-    ${(props) => props.theme.spacing.md};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
-  cursor: pointer;
-  transition: all ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    background-color: ${(props) => props.color}60; // 38% opacity
-  }
-`;
-
 const AddTagSection = styled.div`
   margin-top: ${(props) => props.theme.spacing.md};
 `;
@@ -178,6 +163,7 @@ const TagInput = styled.input`
   border-radius: ${(props) => props.theme.borderRadius.sm};
   color: ${(props) => props.theme.colors.text.primary};
   font-size: ${(props) => props.theme.typography.fontSize.md};
+  margin-bottom: ${(props) => props.theme.spacing.md};
 
   &:focus {
     border-color: ${(props) => props.theme.colors.primary};

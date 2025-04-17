@@ -2,6 +2,8 @@ import React from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useUpload } from "../../context/UploadContext";
+// Importieren der standardisierten Button-Komponenten
+import { Button, IconButton } from "../shared/buttons";
 
 const FilePreview: React.FC = () => {
   const { files, removeFile, goToNextStep, goToPreviousStep } = useUpload();
@@ -27,27 +29,47 @@ const FilePreview: React.FC = () => {
           <GridItem key={file.id} as={motion.div} layout>
             <PreviewImage src={file.preview} alt={file.name} />
             <FileName>{file.name}</FileName>
-            <RemoveButton onClick={() => removeFile(file.id)}>
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </RemoveButton>
+            <IconButton
+              icon={
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              }
+              onClick={() => removeFile(file.id)}
+              size="small"
+              variant="text"
+              style={{
+                position: "absolute",
+                top: "4px",
+                right: "4px",
+                width: "24px",
+                height: "24px",
+                borderRadius: "50%",
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                color: "white",
+                opacity: "0.7",
+              }}
+            />
           </GridItem>
         ))}
       </GridContainer>
 
       <ButtonGroup>
-        <AddMoreButton onClick={goToPreviousStep}>Add More</AddMoreButton>
-        <ContinueButton onClick={goToNextStep}>Continue</ContinueButton>
+        <Button variant="text" onClick={goToPreviousStep}>
+          Add More
+        </Button>
+        <Button variant="primary" onClick={goToNextStep}>
+          Continue
+        </Button>
       </ButtonGroup>
     </Container>
   );
@@ -120,26 +142,6 @@ const FileName = styled.div`
   align-items: center;
 `;
 
-const RemoveButton = styled.button`
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-  transition: opacity ${(props) => props.theme.transitions.short};
-
-  &:hover {
-    opacity: 1;
-  }
-`;
-
 const ButtonGroup = styled.div`
   display: flex;
   justify-content: space-between;
@@ -149,34 +151,6 @@ const ButtonGroup = styled.div`
   @media (max-width: ${(props) => props.theme.breakpoints.sm}) {
     flex-direction: column;
     gap: ${(props) => props.theme.spacing.md};
-  }
-`;
-
-const Button = styled.button`
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.xl};
-  border-radius: 4px;
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  transition: all ${(props) => props.theme.transitions.short};
-`;
-
-const AddMoreButton = styled(Button)`
-  background-color: transparent;
-  color: ${(props) => props.theme.colors.text.primary};
-  border: 1px solid ${(props) => props.theme.colors.divider};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.background};
-  }
-`;
-
-const ContinueButton = styled(Button)`
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.primary}CC;
   }
 `;
 

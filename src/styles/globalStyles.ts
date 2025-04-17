@@ -1,9 +1,7 @@
-import { createGlobalStyle } from 'styled-components';
-import { Theme } from './theme';
+import { createGlobalStyle } from "styled-components";
+import { Theme } from "./theme";
 
 const GlobalStyles = createGlobalStyle<{ theme: Theme }>`
-  /* Import Inter font from Google Fonts */
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
   /* CSS Reset */
   *, *::before, *::after {
@@ -105,7 +103,8 @@ const GlobalStyles = createGlobalStyle<{ theme: Theme }>`
 
   /* Adjust selection color */
   ::selection {
-    background-color: ${({ theme }) => theme.colors.primary}80; /* 50% opacity */
+    background-color: ${({ theme }) =>
+      theme.colors.primary}80; /* 50% opacity */
     color: ${({ theme }) => theme.colors.text.primary};
   }
 `;

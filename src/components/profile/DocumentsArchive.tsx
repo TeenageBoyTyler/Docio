@@ -1,11 +1,16 @@
+// src/components/profile/DocumentsArchive.tsx
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   useProfile,
   ProfileView,
   DocumentMetadata,
 } from "../../context/ProfileContext";
+// Importieren der standardisierten Empty-State-Komponente
+import { EmptyCollection } from "../shared/empty";
+// Importieren der standardisierten Loading-Komponenten
+import { Spinner } from "../shared/loading";
 
 interface DocumentsArchiveProps {
   onNavigate: (view: ProfileView) => void;
@@ -25,6 +30,7 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     availableTags,
     isLoading,
     loadDocuments,
+    loadTags,
   } = useProfile();
 
   // State for date grouping and filtering
@@ -148,10 +154,23 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     console.log("Edit tags for:", selectedDocuments);
   };
 
-  // Fetch documents on mount
+  // Handler für den Upload neuer Dokumente
+  const handleUploadDocuments = () => {
+    // Navigation zum Upload-Bereich
+    // In einer vollständigen Implementation würde hier zur Upload-Seite navigiert werden
+    console.log("Navigate to upload");
+  };
+
+  // Fetch documents AND tags on mount only once
   useEffect(() => {
-    loadDocuments();
-  }, [loadDocuments]);
+    const loadData = async () => {
+      await loadDocuments();
+      await loadTags(); // Wichtig: Tags auch laden, damit sie in den Dokumenten angezeigt werden können
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Find tag name by ID
   const getTagName = (tagId: string) => {
@@ -197,11 +216,27 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     return (
       <DocumentTags>
         {visibleTags.map((tagId) => (
-          <DocumentTag key={tagId} color={getTagColor(tagId)}>
+          <DocumentTag
+            key={tagId}
+            color={getTagColor(tagId)}
+            as={motion.div}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+          >
             {getTagName(tagId)}
           </DocumentTag>
         ))}
-        {extraTags > 0 && <DocumentTagMore>+{extraTags}</DocumentTagMore>}
+        {extraTags > 0 && (
+          <DocumentTagMore
+            as={motion.div}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+          >
+            +{extraTags}
+          </DocumentTagMore>
+        )}
       </DocumentTags>
     );
   };
@@ -275,7 +310,7 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
                 <DocumentInfo>
                   <DocumentName>{doc.name}</DocumentName>
                   <DocumentDate>
-                    {new Date(doc.uploadDate).toLocaleDateString()}
+                    {new Date(doc.uploadDate).toLocaleString()}
                   </DocumentDate>
                   {renderDocumentTags(doc)}
                 </DocumentInfo>
@@ -317,6 +352,12 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
               color={tag.color}
               isActive={activeTagFilter === tag.id}
               onClick={() => handleTagFilter(tag.id)}
+              as={motion.div}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
             >
               {tag.name}
             </TagFilterChip>
@@ -344,6 +385,7 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
             <path d="M19 12H5" />
             <path d="M12 19l-7-7 7-7" />
           </svg>
+          <BackButtonText>Back to Profile</BackButtonText>
         </BackButton>
         <Title>My Documents</Title>
       </Header>
@@ -352,57 +394,17 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
 
       {isLoading ? (
         <Loading>
-          <LoadingSpinner />
-          <LoadingText>Loading documents...</LoadingText>
+          <Spinner size="large" showLabel labelText="Loading documents..." />
         </Loading>
       ) : (
         <>
           {documents.length === 0 ? (
-            <EmptyState>
-              <EmptyIcon>
-                <svg
-                  width="64"
-                  height="64"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M14 2V8H20"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12 18V12"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M9 15H15"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </EmptyIcon>
-              <EmptyTitle>No Documents Yet</EmptyTitle>
-              <EmptyText>
-                Upload documents to see them here. They will be organized by
-                date and tags.
-              </EmptyText>
-            </EmptyState>
+            <EmptyCollection
+              collectionType="documents"
+              onAction={handleUploadDocuments}
+              actionText="Upload First Document"
+              size="large"
+            />
           ) : (
             <DocumentsContainer>{renderDocumentGroups()}</DocumentsContainer>
           )}
@@ -435,13 +437,18 @@ const BackButton = styled.button`
   justify-content: center;
   color: ${(props) => props.theme.colors.text.primary};
   margin-right: ${(props) => props.theme.spacing.md};
-  width: 40px;
-  height: 40px;
+  padding: ${(props) => props.theme.spacing.xs}
+    ${(props) => props.theme.spacing.sm};
   border-radius: ${(props) => props.theme.borderRadius.md};
 
   &:hover {
     background-color: ${(props) => props.theme.colors.background};
   }
+`;
+
+const BackButtonText = styled.span`
+  margin-left: ${(props) => props.theme.spacing.xs};
+  font-size: ${(props) => props.theme.typography.fontSize.sm};
 `;
 
 const Title = styled.h2`
@@ -472,25 +479,19 @@ interface TagFilterChipProps {
   isActive: boolean;
 }
 
-const TagFilterChip = styled.button<TagFilterChipProps>`
-  display: flex;
-  align-items: center;
+const TagFilterChip = styled(motion.div)<TagFilterChipProps>`
+  background-color: ${(props) => props.color}40; // 25% opacity
+  color: ${(props) => props.color};
+  border: 2px solid ${(props) => (props.isActive ? props.color : "transparent")};
   padding: ${(props) => props.theme.spacing.xs}
     ${(props) => props.theme.spacing.md};
   border-radius: ${(props) => props.theme.borderRadius.md};
   font-size: ${(props) => props.theme.typography.fontSize.sm};
-  background-color: ${(props) =>
-    props.isActive ? props.color : props.theme.colors.surface};
-  color: ${(props) =>
-    props.isActive ? "#FFF" : props.theme.colors.text.primary};
-  border: 1px solid ${(props) => props.color};
+  cursor: pointer;
   transition: all ${(props) => props.theme.transitions.short};
 
   &:hover {
-    background-color: ${(props) =>
-      props.isActive ? props.color : `${props.color}40`};
-    color: ${(props) =>
-      props.isActive ? "#FFF" : props.theme.colors.text.primary};
+    background-color: ${(props) => props.color}60; // 38% opacity
   }
 `;
 
@@ -600,24 +601,38 @@ interface DocumentTagProps {
   color: string;
 }
 
-const DocumentTag = styled.div<DocumentTagProps>`
-  font-size: ${(props) => props.theme.typography.fontSize.xs};
-  padding: 2px 6px;
-  border-radius: ${(props) => props.theme.borderRadius.sm};
-  background-color: ${(props) => `${props.color}33`}; /* 20% opacity */
+const DocumentTag = styled(motion.div)<DocumentTagProps>`
+  background-color: ${(props) => props.color}40; // 25% opacity
   color: ${(props) => props.color};
+  padding: ${(props) => props.theme.spacing.xs}
+    ${(props) => props.theme.spacing.md};
+  border-radius: ${(props) => props.theme.borderRadius.md};
+  font-size: ${(props) => props.theme.typography.fontSize.sm};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100px;
+  transition: all ${(props) => props.theme.transitions.short};
+  cursor: pointer;
+
+  &:hover {
+    background-color: ${(props) => props.color}60; // 38% opacity
+  }
 `;
 
-const DocumentTagMore = styled.div`
-  font-size: ${(props) => props.theme.typography.fontSize.xs};
-  padding: 2px 6px;
-  border-radius: ${(props) => props.theme.borderRadius.sm};
+const DocumentTagMore = styled(motion.div)`
+  font-size: ${(props) => props.theme.typography.fontSize.sm};
+  padding: ${(props) => props.theme.spacing.xs}
+    ${(props) => props.theme.spacing.md};
+  border-radius: ${(props) => props.theme.borderRadius.md};
   background-color: ${(props) => props.theme.colors.background};
   color: ${(props) => props.theme.colors.text.secondary};
+  transition: all ${(props) => props.theme.transitions.short};
+  cursor: pointer;
+
+  &:hover {
+    background-color: ${(props) => props.theme.colors.surface};
+  }
 `;
 
 interface SelectIndicatorProps {
@@ -705,58 +720,6 @@ const Loading = styled.div`
   align-items: center;
   justify-content: center;
   height: 300px;
-`;
-
-const LoadingSpinner = styled.div`
-  width: 40px;
-  height: 40px;
-  border: 3px solid ${(props) => props.theme.colors.background};
-  border-top: 3px solid ${(props) => props.theme.colors.primary};
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: ${(props) => props.theme.spacing.md};
-
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-`;
-
-const LoadingText = styled.div`
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  color: ${(props) => props.theme.colors.text.secondary};
-`;
-
-const EmptyState = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  height: 300px;
-  padding: ${(props) => props.theme.spacing.xl};
-`;
-
-const EmptyIcon = styled.div`
-  color: ${(props) => props.theme.colors.text.secondary};
-  margin-bottom: ${(props) => props.theme.spacing.lg};
-`;
-
-const EmptyTitle = styled.h3`
-  font-size: ${(props) => props.theme.typography.fontSize.lg};
-  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
-  color: ${(props) => props.theme.colors.text.primary};
-  margin-bottom: ${(props) => props.theme.spacing.md};
-`;
-
-const EmptyText = styled.p`
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  color: ${(props) => props.theme.colors.text.secondary};
-  max-width: 400px;
 `;
 
 export default DocumentsArchive;

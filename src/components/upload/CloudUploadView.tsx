@@ -7,6 +7,8 @@ import {
   MetadataStorage,
 } from "../../services/cloudStorageService";
 import { useToast } from "../../context/ToastContext";
+import { Button } from "../shared/buttons";
+import { LoadingOverlay, SyncIndicator } from "../shared/loading";
 
 const CloudUploadView: React.FC = () => {
   const { files, processedDocuments, goToNextStep, goToPreviousStep } =
@@ -20,6 +22,11 @@ const CloudUploadView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [provider, setProvider] = useState<string | null>(null);
 
+  // Sync status für SyncIndicator
+  const [syncStatus, setSyncStatus] = useState<
+    "idle" | "syncing" | "success" | "error" | "offline"
+  >("idle");
+
   // Prüfe die Verbindung zur Cloud beim Laden
   useEffect(() => {
     const checkConnection = async () => {
@@ -28,6 +35,7 @@ const CloudUploadView: React.FC = () => {
 
       if (connected) {
         setProvider(cloudStorage.getCurrentProvider());
+        setSyncStatus("idle");
       } else {
         showToast(
           "Not connected to cloud storage. Please connect first.",
@@ -35,6 +43,7 @@ const CloudUploadView: React.FC = () => {
         );
         setError("Cloud storage not connected");
         setIsUploading(false);
+        setSyncStatus("offline");
       }
     };
 
@@ -49,6 +58,9 @@ const CloudUploadView: React.FC = () => {
       }
 
       try {
+        // Setze Sync-Status auf "Syncing"
+        setSyncStatus("syncing");
+
         // Lade vorhandene Metadaten
         let metadata = await cloudStorage.loadMetadata();
         if (!metadata) {
@@ -101,6 +113,7 @@ const CloudUploadView: React.FC = () => {
 
         // Erfolgreicher Abschluss
         setIsUploading(false);
+        setSyncStatus("success");
 
         // Automatisch zum nächsten Schritt nach kurzer Verzögerung
         setTimeout(() => {
@@ -111,6 +124,7 @@ const CloudUploadView: React.FC = () => {
         setError("Cloud upload failed. Please try again.");
         showToast("Connection lost. Retry.", "error");
         setIsUploading(false);
+        setSyncStatus("error");
       }
     };
 
@@ -131,6 +145,7 @@ const CloudUploadView: React.FC = () => {
     const success = await cloudStorage.connect("dropbox");
     if (!success) {
       showToast("Couldn't connect to Cloud Service.", "error");
+      setSyncStatus("error");
     }
   };
 
@@ -140,53 +155,51 @@ const CloudUploadView: React.FC = () => {
     setCurrentFile(0);
     setError(null);
     setIsUploading(true);
+    setSyncStatus("idle");
   };
 
   return (
     <Container>
+      {/* Vollbild-Loading-Overlay zeigen, wenn Upload läuft */}
+      <LoadingOverlay
+        isVisible={isUploading && isConnected}
+        text={`Uploading document ${currentFile} of ${files.length}`}
+        blockInteraction={true}
+        opacity={0.7}
+      />
+
       <UploadContent>
-        <UploadIcon isUploading={isUploading}>
-          {isUploading ? (
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04ZM19 18H6C3.79 18 2 16.21 2 14C2 11.95 3.53 10.24 5.56 10.03L6.63 9.92L7.13 8.97C8.08 7.14 9.94 6 12 6C14.62 6 16.88 7.86 17.39 10.43L17.69 11.93L19.22 12.04C20.78 12.14 22 13.45 22 15C22 16.65 20.65 18 19 18ZM8 13H10.55V16H13.45V13H16L12 9L8 13Z"
-                fill="currentColor"
-              />
-            </svg>
-          ) : error ? (
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM11 15H13V17H11V15ZM11 7H13V13H11V7Z"
-                fill="currentColor"
-              />
-            </svg>
+        <StatusIconContainer>
+          {!isConnected ? (
+            <CloudIcon>
+              <svg
+                width="64"
+                height="64"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04ZM19 18H6C3.79 18 2 16.21 2 14C2 11.95 3.53 10.24 5.56 10.03L6.63 9.92L7.13 8.97C8.08 7.14 9.94 6 12 6C14.62 6 16.88 7.86 17.39 10.43L17.69 11.93L19.22 12.04C20.78 12.14 22 13.45 22 15C22 16.65 20.65 18 19 18ZM8 13H10.55V16H13.45V13H16L12 9L8 13Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </CloudIcon>
           ) : (
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM16.59 7.58L10 14.17L7.41 11.59L6 13L10 17L18 9L16.59 7.58Z"
-                fill="currentColor"
-              />
-            </svg>
+            <SyncIndicator
+              status={syncStatus}
+              size="large"
+              showLabel
+              showWhenIdle={true}
+              customLabels={{
+                idle: "Ready to Upload",
+                syncing: `Uploading (${currentFile}/${files.length})`,
+                success: "Upload Complete",
+                error: "Upload Failed",
+              }}
+            />
           )}
-        </UploadIcon>
+        </StatusIconContainer>
 
         <Title>
           {!isConnected
@@ -220,12 +233,16 @@ const CloudUploadView: React.FC = () => {
         )}
 
         {!isConnected && (
-          <ConnectButton onClick={handleConnectCloud}>
+          <Button variant="primary" onClick={handleConnectCloud} fullWidth>
             Connect to Dropbox
-          </ConnectButton>
+          </Button>
         )}
 
-        {error && <RetryButton onClick={handleRetry}>Try Again</RetryButton>}
+        {error && (
+          <Button variant="primary" onClick={handleRetry} fullWidth>
+            Try Again
+          </Button>
+        )}
 
         {!isUploading && !error && isConnected && (
           <UploadSummary>
@@ -268,29 +285,19 @@ const UploadContent = styled.div`
   justify-content: center;
   text-align: center;
   max-width: 500px;
+  width: 100%;
 `;
 
-interface UploadIconProps {
-  isUploading: boolean;
-}
-
-const UploadIcon = styled.div<UploadIconProps>`
-  color: ${(props) =>
-    props.isUploading
-      ? props.theme.colors.primary
-      : props.theme.colors.success};
+const StatusIconContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80px;
   margin-bottom: ${(props) => props.theme.spacing.lg};
-  animation: ${(props) =>
-    props.isUploading ? "spin 2s linear infinite" : "none"};
+`;
 
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
+const CloudIcon = styled.div`
+  color: ${(props) => props.theme.colors.primary};
 `;
 
 const Title = styled.h2`
@@ -318,34 +325,6 @@ const ProgressContainer = styled.div`
 const ProgressBar = styled.div`
   height: 100%;
   background-color: ${(props) => props.theme.colors.primary};
-`;
-
-const Button = styled.button`
-  padding: ${(props) => props.theme.spacing.md}
-    ${(props) => props.theme.spacing.xl};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  margin-top: ${(props) => props.theme.spacing.md};
-  transition: all ${(props) => props.theme.transitions.short};
-`;
-
-const ConnectButton = styled(Button)`
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.primary}CC;
-  }
-`;
-
-const RetryButton = styled(Button)`
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.primary}CC;
-  }
 `;
 
 const UploadSummary = styled.div`

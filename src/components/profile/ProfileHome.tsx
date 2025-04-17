@@ -1,6 +1,11 @@
+// src/components/profile/ProfileHome.tsx
 import React from "react";
 import styled from "styled-components";
+import { motion } from "framer-motion";
 import { useProfile, ProfileView } from "../../context/ProfileContext";
+// Importieren der standardisierten SyncIndicator-Komponente
+import { SyncIndicator } from "../shared/loading";
+import { Button } from "../shared/buttons";
 
 interface ProfileHomeProps {
   onNavigate: (view: ProfileView) => void;
@@ -14,6 +19,8 @@ const ProfileHome: React.FC<ProfileHomeProps> = ({ onNavigate }) => {
     isCloudConnected,
     storage,
     lastActivity,
+    syncStatus,
+    forceSynchronize,
   } = useProfile();
 
   // Berechne die Speichernutzung in Prozent
@@ -21,6 +28,15 @@ const ProfileHome: React.FC<ProfileHomeProps> = ({ onNavigate }) => {
     Math.round((storage.used / storage.total) * 100),
     100
   );
+
+  // Ermittle den Status für den SyncIndicator
+  const getSyncStatus = () => {
+    if (!isCloudConnected) return "offline";
+    if (syncStatus.syncInProgress) return "syncing";
+    if (syncStatus.lastSyncError) return "error";
+    if (syncStatus.hasOfflineChanges) return "idle"; // Hier könnte auch ein spezieller Status verwendet werden
+    return "success";
+  };
 
   return (
     <Container>
@@ -54,6 +70,36 @@ const ProfileHome: React.FC<ProfileHomeProps> = ({ onNavigate }) => {
             {storage.used} MB of {storage.total} MB used ({storagePercentage}%)
           </UsageText>
         </StorageUsage>
+
+        {/* Standardisierter SyncIndicator statt eigener Implementation */}
+        {isCloudConnected && (
+          <SyncStatusContainer>
+            <SyncIndicator
+              status={getSyncStatus()}
+              size="medium"
+              showLabel
+              showWhenIdle={true}
+              customLabels={{
+                idle: syncStatus.hasOfflineChanges
+                  ? "Pending changes will sync when online"
+                  : "In Sync",
+                syncing: "Synchronizing...",
+                success: `Last synced: ${
+                  syncStatus.lastSyncTime
+                    ? new Date(syncStatus.lastSyncTime).toLocaleString()
+                    : "Never"
+                }`,
+                error: "Sync failed",
+                offline: "Offline",
+              }}
+            />
+
+            {/* Sync-Button bei ausstehenden Änderungen */}
+            {syncStatus.hasOfflineChanges && !syncStatus.syncInProgress && (
+              <SyncButton onClick={forceSynchronize}>Sync Now</SyncButton>
+            )}
+          </SyncStatusContainer>
+        )}
       </StorageInfo>
 
       <StatsList>
@@ -241,6 +287,10 @@ const StorageUsage = styled.div`
   margin-top: ${(props) => props.theme.spacing.md};
 `;
 
+interface UsageProgressProps {
+  width: number;
+}
+
 const UsageProgressBg = styled.div`
   width: 100%;
   height: 8px;
@@ -249,10 +299,6 @@ const UsageProgressBg = styled.div`
   overflow: hidden;
   margin-bottom: ${(props) => props.theme.spacing.sm};
 `;
-
-interface UsageProgressProps {
-  width: number;
-}
 
 const UsageProgress = styled.div<UsageProgressProps>`
   width: ${(props) => props.width}%;
@@ -264,6 +310,31 @@ const UsageProgress = styled.div<UsageProgressProps>`
 const UsageText = styled.div`
   font-size: ${(props) => props.theme.typography.fontSize.xs};
   color: ${(props) => props.theme.colors.text.secondary};
+`;
+
+// Neuer Container für den SyncIndicator
+const SyncStatusContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: ${(props) => props.theme.spacing.md};
+  padding-top: ${(props) => props.theme.spacing.md};
+  border-top: 1px solid ${(props) => props.theme.colors.divider};
+`;
+
+const SyncButton = styled.button`
+  background-color: transparent;
+  color: ${(props) => props.theme.colors.primary};
+  font-size: ${(props) => props.theme.typography.fontSize.xs};
+  padding: ${(props) => props.theme.spacing.xs}
+    ${(props) => props.theme.spacing.sm};
+  border: 1px solid ${(props) => props.theme.colors.primary};
+  border-radius: ${(props) => props.theme.borderRadius.sm};
+  cursor: pointer;
+
+  &:hover {
+    background-color: ${(props) => props.theme.colors.primary}20;
+  }
 `;
 
 const StatsList = styled.div`
