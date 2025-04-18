@@ -5,6 +5,12 @@ import { useUpload } from "../../context/UploadContext";
 import TagSelector from "./TagSelector";
 // Importieren der standardisierten Button-Komponenten
 import { Button, IconButton } from "../shared/buttons";
+// Importieren der BackButton-Komponente
+import BackButton from "../shared/navigation/BackButton";
+// Importieren der standardisierten ProgressIndicator-Komponente
+import ProgressIndicator, {
+  Step,
+} from "../shared/navigation/ProgressIndicator";
 
 const TaggingView: React.FC = () => {
   const {
@@ -24,6 +30,29 @@ const TaggingView: React.FC = () => {
       goToPreviousStep();
     }
   }, [files, goToPreviousStep]);
+
+  // Schritte für den ProgressIndicator basierend auf den Files generieren
+  const getProgressSteps = (): Step[] => {
+    return files.map((file, index) => {
+      let status: Step["status"] = "upcoming";
+
+      if (index < currentFileIndex) {
+        status = "completed";
+      } else if (index === currentFileIndex) {
+        status = "current";
+      }
+
+      return {
+        id: file.id,
+        label: `Image ${index + 1}`,
+        status,
+        // Zusätzliche Beschreibung nur für Desktop hinzufügen
+        description: !isMobile
+          ? file.name.substring(0, 20) + (file.name.length > 20 ? "..." : "")
+          : undefined,
+      };
+    });
+  };
 
   // Aktuelles File
   const currentFile = files[currentFileIndex];
@@ -60,6 +89,14 @@ const TaggingView: React.FC = () => {
     }
   };
 
+  // Navigation durch ProgressIndicator
+  const handleStepClick = (stepId: string) => {
+    const stepIndex = files.findIndex((file) => file.id === stepId);
+    if (stepIndex >= 0 && stepIndex < currentFileIndex) {
+      setCurrentFileIndex(stepIndex);
+    }
+  };
+
   // Editor ein-/ausschalten
   const toggleEditor = () => {
     setShowEditor(!showEditor);
@@ -70,34 +107,26 @@ const TaggingView: React.FC = () => {
     return (
       <MobileContainer>
         <Header>
-          <IconButton
-            icon={
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M20 11H7.83L13.42 5.41L12 4L4 12L12 20L13.41 18.59L7.83 13H20V11Z"
-                  fill="currentColor"
-                />
-              </svg>
-            }
-            onClick={goToPreviousImage}
-            variant="text"
-            style={{
-              position: "absolute",
-              left: "16px",
-              top: "50%",
-              transform: "translateY(-50%)",
-            }}
-          />
+          {/* BackButton statt IconButton für konsistente Navigation */}
+          <BackButtonContainer>
+            <BackButton
+              onClick={goToPreviousImage}
+              variant="text"
+              showLabel={false}
+              aria-label="Back to previous image or preview"
+            />
+          </BackButtonContainer>
           <Title>Tag Image</Title>
-          <ProgressText>
-            Image {currentFileIndex + 1} of {files.length}
-          </ProgressText>
+
+          {/* Progress-Bar (kompakt für mobile) anstelle von Text */}
+          <ProgressContainer>
+            <ProgressIndicator
+              steps={getProgressSteps()}
+              currentStep={currentFile.id}
+              onStepClick={handleStepClick}
+              compact={true}
+            />
+          </ProgressContainer>
         </Header>
 
         <ImageContainer>
@@ -196,6 +225,16 @@ const TaggingView: React.FC = () => {
   // Desktop-Ansicht
   return (
     <DesktopContainer>
+      {/* BackButton für Desktop-Ansicht hinzufügen */}
+      <BackButtonContainer desktop>
+        <BackButton
+          onClick={goToPreviousImage}
+          showLabel={true}
+          label="Back to Preview"
+          variant="text"
+        />
+      </BackButtonContainer>
+
       <ImageSection>
         <PreviewImage
           src={currentFile.preview}
@@ -277,9 +316,15 @@ const TaggingView: React.FC = () => {
       <SidePanel>
         <Header>
           <Title>Tag Image</Title>
-          <ProgressText>
-            Image {currentFileIndex + 1} of {files.length}
-          </ProgressText>
+
+          {/* ProgressIndicator anstelle von Text */}
+          <ProgressContainer>
+            <ProgressIndicator
+              steps={getProgressSteps()}
+              currentStep={currentFile.id}
+              onStepClick={handleStepClick}
+            />
+          </ProgressContainer>
         </Header>
 
         <TagSelector fileId={currentFile.id} />
@@ -334,6 +379,15 @@ const Header = styled.div`
   background-color: ${(props) => props.theme.colors.surface};
 `;
 
+// Container für den BackButton (sowohl Mobile als auch Desktop)
+const BackButtonContainer = styled.div<{ desktop?: boolean }>`
+  position: absolute;
+  left: ${(props) => props.theme.spacing.md};
+  top: ${(props) => (props.desktop ? props.theme.spacing.lg : "50%")};
+  transform: ${(props) => (props.desktop ? "none" : "translateY(-50%)")};
+  z-index: ${(props) => props.theme.zIndex.navigation};
+`;
+
 const Title = styled.h2`
   font-size: ${(props) => props.theme.typography.fontSize.xl};
   font-weight: ${(props) => props.theme.typography.fontWeight.bold};
@@ -341,9 +395,11 @@ const Title = styled.h2`
   color: ${(props) => props.theme.colors.text.primary};
 `;
 
-const ProgressText = styled.p`
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
-  color: ${(props) => props.theme.colors.text.secondary};
+// Container für den ProgressIndicator (sowohl Mobile als auch Desktop)
+const ProgressContainer = styled.div`
+  width: 100%;
+  margin-top: ${(props) => props.theme.spacing.sm};
+  margin-bottom: ${(props) => props.theme.spacing.xs};
 `;
 
 const ImageContainer = styled.div`
@@ -430,6 +486,7 @@ const DesktopContainer = styled.div`
   width: 100%;
   height: 100%;
   background-color: ${(props) => props.theme.colors.background};
+  position: relative; /* Für absolute Positionierung des BackButtons */
 `;
 
 const ImageSection = styled.div`

@@ -8,6 +8,8 @@ import {
 } from "../../context/ProfileContext";
 import { Button } from "../shared/buttons";
 import { RadioButton, PasswordField, Checkbox } from "../shared/inputs";
+// Import der standardisierten BackButton-Komponente
+import BackButton from "../shared/navigation/BackButton";
 
 interface ProcessingSettingsProps {
   onNavigate: (view: ProfileView) => void;
@@ -223,23 +225,13 @@ const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
   return (
     <Container>
       <Header>
-        <BackButton onClick={() => onNavigate("home")}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M19 12H5" />
-            <path d="M12 19l-7-7 7-7" />
-          </svg>
-          <BackButtonText>Back to Profile</BackButtonText>
-        </BackButton>
+        {/* Ersetzen des benutzerdefinierten Back-Buttons durch die standardisierte BackButton-Komponente */}
+        <BackButton
+          onClick={() => onNavigate("home")}
+          label="Back to Profile"
+          showLabel={true}
+          variant="text"
+        />
         <Title>Processing Settings</Title>
       </Header>
 
@@ -413,30 +405,13 @@ const Header = styled.div`
   margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
-const BackButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${(props) => props.theme.colors.text.primary};
-  margin-right: ${(props) => props.theme.spacing.md};
-  padding: ${(props) => props.theme.spacing.xs}
-    ${(props) => props.theme.spacing.sm};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.background};
-  }
-`;
-
-const BackButtonText = styled.span`
-  margin-left: ${(props) => props.theme.spacing.xs};
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
-`;
+// Der alte BackButton und BackButtonText werden entfernt, da sie durch die standardisierte Komponente ersetzt wurden
 
 const Title = styled.h2`
   font-size: ${(props) => props.theme.typography.fontSize.xl};
   font-weight: ${(props) => props.theme.typography.fontWeight.bold};
   color: ${(props) => props.theme.colors.text.primary};
+  margin-left: ${(props) => props.theme.spacing.md};
 `;
 
 const SettingsSection = styled.section`

@@ -7,10 +7,16 @@ import {
   ProfileView,
   DocumentMetadata,
 } from "../../context/ProfileContext";
+// Importieren der Navigation
+import { useNavigation } from "../../context/NavigationContext";
 // Importieren der standardisierten Empty-State-Komponente
 import { EmptyCollection } from "../shared/empty";
 // Importieren der standardisierten Loading-Komponenten
 import { Spinner } from "../shared/loading";
+// Importieren der standardisierten BackButton-Komponente
+import BackButton from "../shared/navigation/BackButton";
+// Importieren der standardisierten Tag-Komponente
+import Tag from "../shared/tags/Tag";
 
 interface DocumentsArchiveProps {
   onNavigate: (view: ProfileView) => void;
@@ -33,6 +39,9 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     loadTags,
   } = useProfile();
 
+  // Navigation-Context verwenden
+  const { navigateTo } = useNavigation();
+
   // State for date grouping and filtering
   const [groupedDocuments, setGroupedDocuments] = useState<
     Record<DateGroup, DocumentMetadata[]>
@@ -44,7 +53,8 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     Older: [],
   });
 
-  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
+  // Änderung von einzelnem tagId zu Array für Mehrfachauswahl
+  const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
   const [dateRangeFilter, setDateRangeFilter] = useState<{
     from: Date | null;
     to: Date | null;
@@ -63,11 +73,12 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     const lastMonthStart = new Date(today);
     lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
 
-    // Filter by tag if a tag filter is active
+    // Filter by tags if tag filters are active
     let filteredDocs = [...documents];
-    if (activeTagFilter) {
+    if (activeTagFilters.length > 0) {
       filteredDocs = documents.filter((doc) =>
-        doc.tags.includes(activeTagFilter)
+        // Dokument enthält mindestens einen der ausgewählten Tags
+        doc.tags.some((tagId) => activeTagFilters.includes(tagId))
       );
     }
 
@@ -116,7 +127,7 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     });
 
     setGroupedDocuments(grouped);
-  }, [documents, activeTagFilter, dateRangeFilter]);
+  }, [documents, activeTagFilters, dateRangeFilter]);
 
   // Helper function to check if two dates are the same day
   const isSameDay = (date1: Date, date2: Date) => {
@@ -136,9 +147,18 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     }
   };
 
-  // Handler for tag filter
-  const handleTagFilter = (tagId: string | null) => {
-    setActiveTagFilter(tagId === activeTagFilter ? null : tagId);
+  // Handler für Tag-Filter - aktualisiert für Mehrfachauswahl
+  const handleTagFilter = (tagId: string) => {
+    setActiveTagFilters((prevFilters) => {
+      // Prüfen ob der Tag bereits ausgewählt ist
+      if (prevFilters.includes(tagId)) {
+        // Wenn ja, entfernen wir ihn
+        return prevFilters.filter((id) => id !== tagId);
+      } else {
+        // Wenn nicht, fügen wir ihn hinzu
+        return [...prevFilters, tagId];
+      }
+    });
   };
 
   // Handler for deleting selected documents
@@ -154,11 +174,10 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     console.log("Edit tags for:", selectedDocuments);
   };
 
-  // Handler für den Upload neuer Dokumente
+  // Handler für den Upload neuer Dokumente - aktualisiert mit Navigation
   const handleUploadDocuments = () => {
-    // Navigation zum Upload-Bereich
-    // In einer vollständigen Implementation würde hier zur Upload-Seite navigiert werden
-    console.log("Navigate to upload");
+    // Navigation zum Upload-Bereich mithilfe des NavigationContext
+    navigateTo("upload");
   };
 
   // Fetch documents AND tags on mount only once
@@ -326,7 +345,7 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
                       xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
-                        d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z"
+                        d="M9 16.17L4.83 12l-1.42 1.41L9 19L21 7l-1.41-1.41L9 16.17Z"
                         fill="currentColor"
                       />
                     </svg>
@@ -340,29 +359,33 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     });
   };
 
-  // Render available tags as filter options
+  // Render available tags as filter options - aktualisiert um die Tag-Komponente zu verwenden
   const renderTagFilters = () => {
     return (
       <TagFilterContainer>
         <TagFilterTitle>Filter by Tag</TagFilterTitle>
         <TagFilterList>
           {availableTags.map((tag) => (
-            <TagFilterChip
+            <Tag
               key={tag.id}
               color={tag.color}
-              isActive={activeTagFilter === tag.id}
+              isActive={activeTagFilters.includes(tag.id)}
               onClick={() => handleTagFilter(tag.id)}
-              as={motion.div}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.2 }}
             >
               {tag.name}
-            </TagFilterChip>
+            </Tag>
           ))}
         </TagFilterList>
+        {activeTagFilters.length > 0 && (
+          <ClearFiltersButton
+            onClick={() => setActiveTagFilters([])}
+            as={motion.button}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            Clear All Filters
+          </ClearFiltersButton>
+        )}
       </TagFilterContainer>
     );
   };
@@ -370,23 +393,13 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
   return (
     <Container>
       <Header>
-        <BackButton onClick={() => onNavigate("home")}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M19 12H5" />
-            <path d="M12 19l-7-7 7-7" />
-          </svg>
-          <BackButtonText>Back to Profile</BackButtonText>
-        </BackButton>
+        {/* Standardisierte BackButton-Komponente */}
+        <BackButton
+          onClick={() => onNavigate("home")}
+          label="Back to Profile"
+          showLabel={true}
+          variant="text"
+        />
         <Title>My Documents</Title>
       </Header>
 
@@ -431,30 +444,11 @@ const Header = styled.div`
   margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
-const BackButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${(props) => props.theme.colors.text.primary};
-  margin-right: ${(props) => props.theme.spacing.md};
-  padding: ${(props) => props.theme.spacing.xs}
-    ${(props) => props.theme.spacing.sm};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-
-  &:hover {
-    background-color: ${(props) => props.theme.colors.background};
-  }
-`;
-
-const BackButtonText = styled.span`
-  margin-left: ${(props) => props.theme.spacing.xs};
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
-`;
-
 const Title = styled.h2`
   font-size: ${(props) => props.theme.typography.fontSize.xl};
   font-weight: ${(props) => props.theme.typography.fontWeight.bold};
   color: ${(props) => props.theme.colors.text.primary};
+  margin-left: ${(props) => props.theme.spacing.md};
 `;
 
 const TagFilterContainer = styled.div`
@@ -472,26 +466,21 @@ const TagFilterList = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: ${(props) => props.theme.spacing.sm};
+  margin-bottom: ${(props) => props.theme.spacing.md};
 `;
 
-interface TagFilterChipProps {
-  color: string;
-  isActive: boolean;
-}
-
-const TagFilterChip = styled(motion.div)<TagFilterChipProps>`
-  background-color: ${(props) => props.color}40; // 25% opacity
-  color: ${(props) => props.color};
-  border: 2px solid ${(props) => (props.isActive ? props.color : "transparent")};
-  padding: ${(props) => props.theme.spacing.xs}
-    ${(props) => props.theme.spacing.md};
-  border-radius: ${(props) => props.theme.borderRadius.md};
+// Button zum Löschen aller Filter
+const ClearFiltersButton = styled.button`
+  background: none;
+  color: ${(props) => props.theme.colors.text.secondary};
   font-size: ${(props) => props.theme.typography.fontSize.sm};
+  padding: ${(props) => props.theme.spacing.xs} 0;
   cursor: pointer;
-  transition: all ${(props) => props.theme.transitions.short};
+  transition: color ${(props) => props.theme.transitions.short};
 
   &:hover {
-    background-color: ${(props) => props.color}60; // 38% opacity
+    color: ${(props) => props.theme.colors.text.primary};
+    text-decoration: underline;
   }
 `;
 

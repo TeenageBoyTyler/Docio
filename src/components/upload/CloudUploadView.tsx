@@ -9,6 +9,7 @@ import {
 import { useToast } from "../../context/ToastContext";
 import { Button } from "../shared/buttons";
 import { LoadingOverlay, SyncIndicator } from "../shared/loading";
+import { BackButton } from "../shared/navigation";
 
 const CloudUploadView: React.FC = () => {
   const { files, processedDocuments, goToNextStep, goToPreviousStep } =
@@ -160,6 +161,13 @@ const CloudUploadView: React.FC = () => {
 
   return (
     <Container>
+      {/* BackButton - nur anzeigen, wenn kein Upload läuft oder ein Fehler aufgetreten ist */}
+      {(!isUploading || error) && (
+        <BackButtonContainer>
+          <BackButton onClick={goToPreviousStep} />
+        </BackButtonContainer>
+      )}
+
       {/* Vollbild-Loading-Overlay zeigen, wenn Upload läuft */}
       <LoadingOverlay
         isVisible={isUploading && isConnected}
@@ -276,6 +284,16 @@ const Container = styled.div`
   width: 100%;
   height: 100%;
   padding: ${(props) => props.theme.spacing.xl};
+  position: relative;
+`;
+
+const BackButtonContainer = styled.div`
+  position: absolute;
+  top: ${(props) => props.theme.spacing.md};
+  left: ${(props) => props.theme.spacing.md};
+  z-index: ${(props) =>
+    props.theme.zIndex.elevated +
+    1}; // Sicherstellen, dass es über dem LoadingOverlay angezeigt wird
 `;
 
 const UploadContent = styled.div`

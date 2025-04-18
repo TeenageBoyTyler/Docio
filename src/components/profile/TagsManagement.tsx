@@ -12,6 +12,8 @@ import { Spinner } from "../shared/loading";
 import { Button, IconButton } from "../shared/buttons";
 import { TextField } from "../shared/inputs";
 import { ColorPicker, ColorOption } from "../shared/inputs";
+// Import der standardisierten BackButton-Komponente
+import BackButton from "../shared/navigation/BackButton";
 
 interface TagsManagementProps {
   onNavigate: (view: ProfileView) => void;
@@ -114,24 +116,6 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
   // Sortiere Tags alphabetisch
   const sortedTags = [...availableTags].sort((a, b) =>
     a.name.localeCompare(b.name)
-  );
-
-  // Back Icon für den Button
-  const BackIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M19 12H5" />
-      <path d="M12 19l-7-7 7-7" />
-    </svg>
   );
 
   // Add Icon für den Button
@@ -268,15 +252,13 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
   return (
     <Container>
       <Header>
-        {/* Standardisierter IconTextButton für zurück */}
-        <Button
-          variant="text"
+        {/* Standardisierte BackButton-Komponente statt benutzerdefiniertem Button */}
+        <BackButton
           onClick={() => onNavigate("home")}
-          startIcon={<BackIcon />}
-        >
-          Back to Profile
-        </Button>
-
+          label="Back to Profile"
+          showLabel={true}
+          variant="text"
+        />
         <Title>My Tags</Title>
 
         {/* Standardisierter Button für "Add New Tag" */}

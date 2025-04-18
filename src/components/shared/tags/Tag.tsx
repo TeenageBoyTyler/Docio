@@ -42,6 +42,22 @@ const Tag: React.FC<TagProps> = ({
       transition={{ duration: 0.2 }}
     >
       {children}
+      {isActive && (
+        <CheckIcon>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M9 16.17L4.83 12l-1.42 1.41L9 19L21 7l-1.41-1.41L9 16.17Z"
+              fill="currentColor"
+            />
+          </svg>
+        </CheckIcon>
+      )}
     </TagContainer>
   );
 };
@@ -54,8 +70,7 @@ interface TagContainerProps {
 const TagContainer = styled(motion.div)<TagContainerProps>`
   background-color: ${(props) => props.color}40; // 25% opacity
   color: ${(props) => props.color};
-  border: 2px solid
-    ${(props) => (props.isActive ? props.color : "transparent")};
+  border: 2px solid ${(props) => (props.isActive ? props.color : "transparent")};
   padding: ${(props) => props.theme.spacing.xs}
     ${(props) => props.theme.spacing.md};
   border-radius: ${(props) => props.theme.borderRadius.md};
@@ -65,11 +80,19 @@ const TagContainer = styled(motion.div)<TagContainerProps>`
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 150px;
-  display: inline-block;
-  
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+
   &:hover {
     background-color: ${(props) => props.color}60; // 38% opacity
   }
+`;
+
+const CheckIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  margin-left: ${(props) => props.theme.spacing.xs};
 `;
 
 export default Tag;

@@ -8,6 +8,7 @@ import ToastProvider from "./context/ToastContext";
 import UploadProvider from "./context/UploadContext";
 import SearchProvider from "./context/SearchContext";
 import ProfileProvider from "./context/ProfileContext";
+import { NavigationProvider } from "./context/NavigationContext";
 import MainLayout from "./components/layouts/MainLayout"; // Importiere das MainLayout
 import AuthCallback from "./components/auth/AuthCallback";
 import OfflineIndicator from "./components/common/OfflineIndicator";
@@ -15,6 +16,7 @@ import LoadingDemo from "./components/demo/LoadingDemo";
 import EmptyDemo from "./components/demo/EmptyDemo";
 import InputDemo from "./components/demo/InputDemo";
 import ButtonDemo from "./components/demo/ButtonDemo";
+import NavigationDemo from "./components/demo/NavigationDemo";
 
 function App() {
   return (
@@ -22,29 +24,35 @@ function App() {
       <ThemeProvider theme={theme}>
         <GlobalStyles />
         <ToastProvider>
-          <UploadProvider>
-            <SearchProvider>
-              <ProfileProvider>
-                <Routes>
-                  <Route
-                    path="/"
-                    element={
-                      <MainContainer>
-                        <OfflineIndicator />
-                        <MainLayout />
-                      </MainContainer>
-                    }
-                  />
-                  <Route path="/auth/callback" element={<AuthCallback />} />
-                  <Route path="/demo/loading" element={<LoadingDemo />} />{" "}
-                  <Route path="/demo/empty" element={<EmptyDemo />} />
-                  <Route path="/demo/input" element={<InputDemo />} />
-                  <Route path="/demo/button" element={<ButtonDemo />} />
-                  {/* Neue Route */}
-                </Routes>
-              </ProfileProvider>
-            </SearchProvider>
-          </UploadProvider>
+          <NavigationProvider>
+            <UploadProvider>
+              <SearchProvider>
+                <ProfileProvider>
+                  <Routes>
+                    <Route
+                      path="/"
+                      element={
+                        <MainContainer>
+                          <OfflineIndicator />
+                          <MainLayout />
+                        </MainContainer>
+                      }
+                    />
+                    <Route path="/auth/callback" element={<AuthCallback />} />
+                    <Route path="/demo/loading" element={<LoadingDemo />} />
+                    <Route path="/demo/empty" element={<EmptyDemo />} />
+                    <Route path="/demo/input" element={<InputDemo />} />
+                    <Route path="/demo/button" element={<ButtonDemo />} />
+                    <Route
+                      path="/demo/navigation"
+                      element={<NavigationDemo />}
+                    />
+                    {/* Neue Route */}
+                  </Routes>
+                </ProfileProvider>
+              </SearchProvider>
+            </UploadProvider>
+          </NavigationProvider>
         </ToastProvider>
       </ThemeProvider>
     </BrowserRouter>

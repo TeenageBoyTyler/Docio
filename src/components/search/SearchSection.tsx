@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import styled from "styled-components";
-import { SearchProvider } from "../../context/SearchContext";
+import { SearchProvider, useSearch } from "../../context/SearchContext";
+import { useNavigation } from "../../context/NavigationContext";
 import SearchInput from "./SearchInput";
 import SearchResults from "./SearchResults";
 import SelectionActions from "./SelectionActions";
 import PdfCreationView from "./PdfCreationView";
-import { useSearch } from "../../context/SearchContext";
 
 // Wrapper-Komponente, die den SearchProvider bereitstellt
 const SearchSectionWrapper: React.FC = () => {
@@ -19,6 +19,14 @@ const SearchSectionWrapper: React.FC = () => {
 // Komponente mit Zugriff auf den SearchContext
 const SearchSectionContent: React.FC = () => {
   const { currentStep } = useSearch();
+  const { navigateToSearchStep, currentSearchStep } = useNavigation();
+
+  // Synchronisiere Search-Steps mit NavigationContext
+  useEffect(() => {
+    if (currentStep !== currentSearchStep) {
+      navigateToSearchStep(currentStep);
+    }
+  }, [currentStep, currentSearchStep, navigateToSearchStep]);
 
   // Rendere den entsprechenden Schritt je nach currentStep
   const renderStepContent = () => {
@@ -45,7 +53,7 @@ const Container = styled.div`
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: transparent; /* Vom übergeordneten Element übernehmen */
   overflow-y: auto;
 `;
 

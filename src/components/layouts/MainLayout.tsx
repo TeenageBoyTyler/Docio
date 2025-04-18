@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigation } from "../../context/NavigationContext";
 
 // Import der Sektionskomponenten
 import UploadSectionWrapper from "../upload/UploadSection";
@@ -20,22 +21,138 @@ interface SectionProps {
   isActive: boolean;
 }
 
+// Vordefinition der Styled Components, die in anderen Komponenten referenziert werden
+const TitleWrapper = styled(motion.div)`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+`;
+
+const SectionTitle = styled.h2`
+  color: ${(props) => props.theme.colors.text.primary};
+  font-size: ${(props) => props.theme.typography.fontSize.xl};
+  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
+  transform: rotate(-90deg);
+  white-space: nowrap;
+  transition: all ${(props) => props.theme.transitions.short};
+
+  @media (max-width: ${(props) => props.theme.breakpoints.md}) {
+    transform: none;
+  }
+`;
+
+// Erweiterte Props für die Section-Komponente
+interface ExtendedSectionProps extends SectionProps {
+  $isActiveSection: boolean;
+}
+
+// Section-Komponente, die jetzt SectionTitle referenzieren kann
+const Section = styled.div<ExtendedSectionProps>`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: ${(props) => (props.isActive ? 5 : 1)};
+  min-width: 100px;
+  min-height: 100px;
+  /* Alle Sektionen bekommen die dunklere Hintergrundfarbe */
+  background-color: ${(props) => props.theme.colors.background};
+  border-radius: 0; /* Keine abgerundeten Ecken */
+  margin: 0; /* Kein äußerer Abstand */
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: none; /* Shadow entfernt */
+  transition: background-color ${(props) => props.theme.transitions.short};
+
+  /* Hover-Effekt NUR für inaktive Sektionen */
+  ${(props) =>
+    !props.$isActiveSection &&
+    `
+    &:hover {
+      background-color: ${props.theme.colors.surface};
+      
+      /* Title-Effekt beim Hover */
+      ${SectionTitle} {
+        color: ${props.theme.colors.primary};
+        transform: rotate(-90deg) scale(1.05);
+      }
+    }
+  `}
+
+  @media (max-width: ${(props) => props.theme.breakpoints.md}) {
+    min-height: ${(props) => (props.isActive ? "80vh" : "10vh")};
+    margin: 0; /* Kein äußerer Abstand auch auf Mobile */
+
+    /* Angepasster Hover-Effekt für Mobile - NUR für inaktive Sektionen */
+    ${(props) =>
+      !props.$isActiveSection &&
+      `
+      &:hover {
+        ${SectionTitle} {
+          transform: scale(1.05); /* Keine Rotation auf Mobile */
+        }
+      }
+    `}
+  }
+`;
+
+// Weitere Styled Components
+const LayoutContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  width: 100%;
+  background-color: ${(props) => props.theme.colors.background};
+  overflow: hidden;
+  gap: 2px; /* Minimaler Abstand zwischen den Abschnitten */
+
+  @media (max-width: ${(props) => props.theme.breakpoints.md}) {
+    flex-direction: column;
+  }
+`;
+
+const SectionContent = styled.div`
+  position: relative;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+`;
+
+const ContentWrapper = styled(motion.div)`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+`;
+
 // Komponente für das Hauptlayout
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  // State für den aktiven Abschnitt
-  const [activeSection, setActiveSection] = useState<ActiveSection>("upload");
-  // State für den zuletzt aktiven Abschnitt (für Animationsverzögerung)
+  // State für die Animation und vorherigen Abschnitt
   const [previousSection, setPreviousSection] =
     useState<ActiveSection>("upload");
-  // State für Animation in Fortschritt
   const [isAnimating, setIsAnimating] = useState(false);
+
+  // Navigation-Context verwenden
+  const { activeSection, navigateTo } = useNavigation();
+
+  // Effekt, um den vorherigen Abschnitt zu aktualisieren
+  useEffect(() => {
+    if (previousSection !== activeSection) {
+      setPreviousSection(activeSection);
+    }
+  }, [activeSection, previousSection]);
 
   // Handler für Abschnittswechsel
   const handleSectionChange = (section: ActiveSection) => {
     if (section !== activeSection && !isAnimating) {
       setIsAnimating(true);
       setPreviousSection(activeSection);
-      setActiveSection(section);
+      navigateTo(section);
 
       // Animation als beendet markieren nach Verzögerung
       setTimeout(() => {
@@ -44,17 +161,35 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   };
 
-  // Animations-Varianten für die Inhalte
+  // Bestimme die Animationsrichtung basierend auf vorherigem und aktuellem Bereich
+  const getExitVariant = (current: ActiveSection, previous: ActiveSection) => {
+    const sections: ActiveSection[] = ["upload", "search", "profile"];
+    const currentIndex = sections.indexOf(current);
+    const previousIndex = sections.indexOf(previous);
+
+    return previousIndex > currentIndex ? "inactiveRight" : "inactiveLeft";
+  };
+
+  // Verbesserte Animations-Varianten für die Inhalte
   const contentVariants = {
     active: {
       opacity: 1,
+      x: 0,
       transition: {
         delay: 0.2,
         duration: 0.3,
       },
     },
-    inactive: {
+    inactiveLeft: {
       opacity: 0,
+      x: -20,
+      transition: {
+        duration: 0.2,
+      },
+    },
+    inactiveRight: {
+      opacity: 0,
+      x: 20,
       transition: {
         duration: 0.2,
       },
@@ -72,6 +207,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           flex: activeSection === "upload" ? 5 : 1,
         }}
         transition={{ duration: 0.5, ease: "easeInOut" }}
+        $isActiveSection={activeSection === "upload"}
       >
         <SectionContent>
           <AnimatePresence mode="wait">
@@ -79,9 +215,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <ContentWrapper
                 key="upload-content"
                 as={motion.div}
-                initial="inactive"
+                initial={
+                  previousSection === "search"
+                    ? "inactiveLeft"
+                    : "inactiveRight"
+                }
                 animate="active"
-                exit="inactive"
+                exit={getExitVariant("upload", activeSection)}
                 variants={contentVariants}
               >
                 <UploadSectionWrapper />
@@ -110,6 +250,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           flex: activeSection === "search" ? 5 : 1,
         }}
         transition={{ duration: 0.5, ease: "easeInOut" }}
+        $isActiveSection={activeSection === "search"}
       >
         <SectionContent>
           <AnimatePresence mode="wait">
@@ -117,9 +258,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <ContentWrapper
                 key="search-content"
                 as={motion.div}
-                initial="inactive"
+                initial={
+                  previousSection === "upload"
+                    ? "inactiveRight"
+                    : "inactiveLeft"
+                }
                 animate="active"
-                exit="inactive"
+                exit={getExitVariant("search", activeSection)}
                 variants={contentVariants}
               >
                 <SearchSection />
@@ -148,6 +293,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           flex: activeSection === "profile" ? 5 : 1,
         }}
         transition={{ duration: 0.5, ease: "easeInOut" }}
+        $isActiveSection={activeSection === "profile"}
       >
         <SectionContent>
           <AnimatePresence mode="wait">
@@ -155,9 +301,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <ContentWrapper
                 key="profile-content"
                 as={motion.div}
-                initial="inactive"
+                initial={
+                  previousSection === "search"
+                    ? "inactiveRight"
+                    : "inactiveLeft"
+                }
                 animate="active"
-                exit="inactive"
+                exit={getExitVariant("profile", activeSection)}
                 variants={contentVariants}
               >
                 <ProfileSection />
@@ -180,78 +330,5 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     </LayoutContainer>
   );
 };
-
-// Styled Components
-const LayoutContainer = styled.div`
-  display: flex;
-  flex-direction: row;
-  height: 100vh;
-  width: 100%;
-  background-color: ${(props) => props.theme.colors.background};
-  overflow: hidden;
-  gap: 2px; /* Minimaler Abstand zwischen den Abschnitten */
-
-  @media (max-width: ${(props) => props.theme.breakpoints.md}) {
-    flex-direction: column;
-  }
-`;
-
-const Section = styled.div<SectionProps>`
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  flex: ${(props) => (props.isActive ? 5 : 1)};
-  min-width: 100px;
-  min-height: 100px;
-  background-color: ${(props) => props.theme.colors.surface};
-  border-radius: 0; /* Keine abgerundeten Ecken */
-  margin: 0; /* Kein äußerer Abstand */
-  cursor: pointer;
-  overflow: hidden;
-  box-shadow: none; /* Shadow entfernt */
-
-  @media (max-width: ${(props) => props.theme.breakpoints.md}) {
-    min-height: ${(props) => (props.isActive ? "80vh" : "10vh")};
-    margin: 0; /* Kein äußerer Abstand auch auf Mobile */
-  }
-`;
-
-const SectionContent = styled.div`
-  position: relative;
-  height: 100%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-`;
-
-const ContentWrapper = styled(motion.div)`
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-`;
-
-const TitleWrapper = styled(motion.div)`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  width: 100%;
-`;
-
-const SectionTitle = styled.h2`
-  color: ${(props) => props.theme.colors.text.primary};
-  font-size: ${(props) => props.theme.typography.fontSize.xl};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  transform: rotate(-90deg);
-  white-space: nowrap;
-
-  @media (max-width: ${(props) => props.theme.breakpoints.md}) {
-    transform: none;
-  }
-`;
 
 export default MainLayout;

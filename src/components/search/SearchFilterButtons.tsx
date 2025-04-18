@@ -76,6 +76,8 @@ const SearchFilterButtons: React.FC = () => {
 const Container = styled.div`
   display: flex;
   width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
   margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
@@ -83,6 +85,7 @@ const ButtonsContainer = styled.div`
   display: flex;
   gap: ${(props) => props.theme.spacing.md};
   flex-wrap: wrap;
+  justify-content: center; /* Zentriert die Buttons horizontal innerhalb des Containers */
 
   @media (max-width: ${(props) => props.theme.breakpoints.sm}) {
     width: 100%;

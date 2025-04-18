@@ -4,6 +4,7 @@ import { useSearch } from "../../context/SearchContext";
 // Importieren der standardisierten Komponenten
 import { Button, IconTextButton } from "../shared/buttons";
 import { Spinner, LoadingOverlay, LoadingText } from "../shared/loading";
+import BackButton from "../shared/navigation/BackButton";
 
 const PdfCreationView: React.FC = () => {
   const {
@@ -179,26 +180,13 @@ const PdfCreationView: React.FC = () => {
       />
 
       <Header>
-        <Button
-          variant="text"
+        {/* Ersetzen des regulären Buttons durch den standardisierten BackButton */}
+        <BackButton
           onClick={goToPreviousStep}
-          startIcon={
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 11H7.83L13.42 5.41L12 4L4 12L12 20L13.41 18.59L7.83 13H20V11Z"
-                fill="currentColor"
-              />
-            </svg>
-          }
-        >
-          Zurück
-        </Button>
+          label="Zurück zu Aktionen"
+          showLabel={true}
+          variant="text"
+        />
         <Title>PDF erstellen</Title>
       </Header>
 
@@ -226,6 +214,7 @@ const Title = styled.h2`
   font-size: ${(props) => props.theme.typography.fontSize.xl};
   font-weight: ${(props) => props.theme.typography.fontWeight.bold};
   color: ${(props) => props.theme.colors.text.primary};
+  margin-left: ${(props) => props.theme.spacing.md};
 `;
 
 const ContentContainer = styled.div`

@@ -5,6 +5,7 @@ import { useSearch } from "../../context/SearchContext";
 // Importieren der standardisierten Komponenten
 import { Button } from "../shared/buttons";
 import { EmptySelection } from "../shared/empty";
+import BackButton from "../shared/navigation/BackButton";
 
 const SelectionActions: React.FC = () => {
   const { selectedDocuments, goToPreviousStep, goToNextStep, goToStep } =
@@ -29,26 +30,13 @@ const SelectionActions: React.FC = () => {
     return (
       <Container>
         <Header>
-          <Button
-            variant="text"
+          {/* Standardisierte BackButton-Komponente */}
+          <BackButton
             onClick={goToPreviousStep}
-            startIcon={
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M20 11H7.83L13.42 5.41L12 4L4 12L12 20L13.41 18.59L7.83 13H20V11Z"
-                  fill="currentColor"
-                />
-              </svg>
-            }
-          >
-            Zurück
-          </Button>
+            label="Zurück zu Suchergebnissen"
+            showLabel={true}
+            variant="text"
+          />
           <Title>Document Selection</Title>
         </Header>
 
@@ -66,26 +54,13 @@ const SelectionActions: React.FC = () => {
   return (
     <Container>
       <Header>
-        <Button
-          variant="text"
+        {/* Standardisierte BackButton-Komponente */}
+        <BackButton
           onClick={goToPreviousStep}
-          startIcon={
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 11H7.83L13.42 5.41L12 4L4 12L12 20L13.41 18.59L7.83 13H20V11Z"
-                fill="currentColor"
-              />
-            </svg>
-          }
-        >
-          Zurück
-        </Button>
+          label="Zurück zu Suchergebnissen"
+          showLabel={true}
+          variant="text"
+        />
         <Title>Ausgewählte Dokumente</Title>
       </Header>
 
@@ -207,6 +182,7 @@ const Title = styled.h2`
   font-size: ${(props) => props.theme.typography.fontSize.xl};
   font-weight: ${(props) => props.theme.typography.fontWeight.bold};
   color: ${(props) => props.theme.colors.text.primary};
+  margin-left: ${(props) => props.theme.spacing.md};
 `;
 
 const ThumbnailStrip = styled.div`

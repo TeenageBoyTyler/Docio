@@ -218,7 +218,7 @@ const Container = styled.div`
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background-color: ${(props) => props.theme.colors.background};
+  background-color: transparent; /* Vom übergeordneten Element übernehmen */
   position: relative;
 `;
 

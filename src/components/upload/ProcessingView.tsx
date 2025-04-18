@@ -12,6 +12,8 @@ import { useToast } from "../../context/ToastContext";
 // Importieren der standardisierten Komponenten
 import { Button } from "../shared/buttons";
 import { Spinner, LoadingOverlay } from "../shared/loading";
+// Importieren der BackButton-Komponente
+import BackButton from "../shared/navigation/BackButton";
 
 const ProcessingView: React.FC = () => {
   const { files, goToNextStep, goToPreviousStep } = useUpload();
@@ -92,6 +94,17 @@ const ProcessingView: React.FC = () => {
 
   return (
     <Container>
+      {/* BackButton - nur anzeigen, wenn nicht in aktiver Verarbeitung */}
+      {(!isProcessing || error) && (
+        <BackButtonContainer>
+          <BackButton
+            onClick={goToPreviousStep}
+            showLabel={true}
+            label="Back to Preview"
+          />
+        </BackButtonContainer>
+      )}
+
       {/* LoadingOverlay für blockierendes Laden bei längeren Prozessen */}
       <LoadingOverlay
         isVisible={isProcessing && files.length > 3}
@@ -166,9 +179,11 @@ const ProcessingView: React.FC = () => {
         )}
 
         {error && (
-          <Button variant="primary" onClick={handleRetry}>
-            Try Again
-          </Button>
+          <ButtonContainer>
+            <Button variant="primary" onClick={handleRetry}>
+              Try Again
+            </Button>
+          </ButtonContainer>
         )}
 
         {!isProcessing && !error && (
@@ -209,6 +224,15 @@ const Container = styled.div`
   width: 100%;
   height: 100%;
   padding: ${(props) => props.theme.spacing.xl};
+  position: relative; /* Für absolute Positionierung des BackButtons */
+`;
+
+// Neuer Container für den BackButton
+const BackButtonContainer = styled.div`
+  position: absolute;
+  top: ${(props) => props.theme.spacing.lg};
+  left: ${(props) => props.theme.spacing.lg};
+  z-index: ${(props) => props.theme.zIndex.navigation};
 `;
 
 const ProcessingContent = styled.div`
@@ -262,6 +286,11 @@ const ProgressContainer = styled.div`
 const ProgressBar = styled.div`
   height: 100%;
   background-color: ${(props) => props.theme.colors.primary};
+`;
+
+// Neuer Container für Buttons um konsistenten Abstand zu gewährleisten
+const ButtonContainer = styled.div`
+  margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
 const ProcessingSummary = styled.div`

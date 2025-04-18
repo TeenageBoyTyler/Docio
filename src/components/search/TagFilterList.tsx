@@ -52,7 +52,12 @@ const TagFilterList: React.FC = () => {
 // Styled Components
 const Container = styled.div`
   width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
   margin-bottom: ${(props) => props.theme.spacing.lg};
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Zentriert die Inhalte horizontal innerhalb des Containers */
 `;
 
 const TagsLabel = styled.span`
@@ -60,12 +65,14 @@ const TagsLabel = styled.span`
   font-size: ${(props) => props.theme.typography.fontSize.sm};
   display: block;
   margin-bottom: ${(props) => props.theme.spacing.sm};
+  text-align: center; /* Zentriert den Text */
 `;
 
 const TagsContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: ${(props) => props.theme.spacing.sm};
+  justify-content: center; /* Zentriert die Tags horizontal innerhalb des Containers */
 `;
 
 export default TagFilterList;

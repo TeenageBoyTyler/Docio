@@ -110,9 +110,9 @@ const SearchInput: React.FC = () => {
           type="text" // Ändere den Typ von "search" zu "text", um das native X zu vermeiden
         />
 
-        <Button variant="primary" type="submit" disabled={isLoading}>
+        <SearchButton variant="primary" type="submit" disabled={isLoading}>
           Suchen
-        </Button>
+        </SearchButton>
       </SearchForm>
 
       {/* Filter-Buttons für Text/Objekte */}
@@ -131,21 +131,23 @@ const Container = styled.div`
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: ${(props) => props.theme.spacing.xl};
   height: 100%;
+  padding: ${(props) => props.theme.spacing.xl};
 `;
 
 const SearchForm = styled.form`
   display: flex;
   width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
   gap: ${(props) => props.theme.spacing.md};
-  margin-bottom: ${(props) => props.theme.spacing.lg};
+  margin-bottom: 0;
+  align-items: flex-start;
+  justify-content: center;
+  flex-direction: row; /* Immer eine Zeile erzwingen */
+  flex-wrap: nowrap; /* Verhindert Umbruch in neue Zeile */
 
-  @media (max-width: ${(props) => props.theme.breakpoints.sm}) {
-    flex-direction: column;
-  }
+  /* Media-Query entfernt, um zu verhindern, dass die Richtung zu column wird */
 `;
 
 const SelectionIndicator = styled.div`
@@ -153,6 +155,8 @@ const SelectionIndicator = styled.div`
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
   padding: ${(props) => props.theme.spacing.md};
   margin-bottom: ${(props) => props.theme.spacing.md};
   background-color: ${(props) => props.theme.colors.primary}20;
@@ -167,6 +171,54 @@ const SelectionText = styled.span`
 
   &:hover {
     text-decoration: underline;
+  }
+`;
+
+const SearchFieldWrapper = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+`;
+
+const SearchButton = styled(Button)`
+  height: 43px; /* Angepasste Höhe für Position innerhalb des Textfelds */
+  min-height: 43px;
+  max-height: 43px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 ${(props) => props.theme.spacing.lg};
+  margin: 0;
+  border-radius: ${(props) => props.theme.borderRadius.md};
+  box-sizing: border-box;
+`;
+
+// Zusätzliche Komponenten für den integrierten Button
+const SearchFieldContainer = styled.div`
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 800px;
+`;
+
+const SearchButtonContainer = styled.div`
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+`;
+
+// Passe StyledSearchField an, um Platz für den Button zu lassen
+const StyledSearchField = styled(SearchField)`
+  div {
+    margin-bottom: 0 !important;
+  }
+
+  input {
+    padding-right: 100px !important; /* Platz für den Button */
   }
 `;
 

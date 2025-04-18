@@ -2,8 +2,9 @@ import React from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useUpload } from "../../context/UploadContext";
-// Importieren der standardisierten Button-Komponenten
+// Importieren der standardisierten Komponenten
 import { Button, IconButton } from "../shared/buttons";
+import BackButton from "../shared/navigation/BackButton";
 
 const FilePreview: React.FC = () => {
   const { files, removeFile, goToNextStep, goToPreviousStep } = useUpload();
@@ -18,10 +19,19 @@ const FilePreview: React.FC = () => {
   return (
     <Container>
       <Header>
-        <Title>Preview & Confirm</Title>
-        <SubTitle>
-          {files.length} {files.length === 1 ? "image" : "images"} selected
-        </SubTitle>
+        {/* Standardisierte BackButton-Komponente hinzufügen */}
+        <BackButton
+          onClick={goToPreviousStep}
+          label="Back to Selection"
+          showLabel={true}
+          variant="text"
+        />
+        <TitleContainer>
+          <Title>Preview & Confirm</Title>
+          <SubTitle>
+            {files.length} {files.length === 1 ? "image" : "images"} selected
+          </SubTitle>
+        </TitleContainer>
       </Header>
 
       <GridContainer>
@@ -86,7 +96,13 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
+  display: flex;
+  align-items: flex-start;
   margin-bottom: ${(props) => props.theme.spacing.xl};
+`;
+
+const TitleContainer = styled.div`
+  flex: 1;
   text-align: center;
 `;
 

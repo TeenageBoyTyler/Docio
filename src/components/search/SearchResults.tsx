@@ -7,6 +7,7 @@ import { loadPreviewsForResults } from "../../services/searchService";
 // Importieren der standardisierten Komponenten
 import { Button, IconTextButton } from "../shared/buttons";
 import { EmptySearch } from "../shared/empty";
+import { BackButton } from "../shared/navigation";
 
 // In einer vollständigen Implementierung würden wir react-window für die Virtualisierung verwenden
 // Für jetzt implementieren wir eine einfache Version ohne Virtualisierung
@@ -94,26 +95,7 @@ const SearchResults: React.FC = () => {
   return (
     <Container>
       <Header>
-        <Button
-          variant="text"
-          onClick={goToPreviousStep}
-          startIcon={
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M20 11H7.83L13.42 5.41L12 4L4 12L12 20L13.41 18.59L7.83 13H20V11Z"
-                fill="currentColor"
-              />
-            </svg>
-          }
-        >
-          Zurück
-        </Button>
+        <BackButton onClick={goToPreviousStep} label="Zurück" />
         <ResultsCount>
           {results.length} {results.length === 1 ? "Ergebnis" : "Ergebnisse"}{" "}
           gefunden

@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useUpload, Tag as TagType } from "../../context/UploadContext";
 // Direkter Import der Tag-Komponente
 import Tag from "../shared/tags/Tag";
-// Import der standardisierten ColorPicker-Komponente
-import { ColorPicker } from "../shared/inputs";
+// Import der standardisierten Komponenten
+import { ColorPicker, TextField } from "../shared/inputs";
 
 interface TagSelectorProps {
   fileId: string;
@@ -48,6 +48,11 @@ const TagSelector: React.FC<TagSelectorProps> = ({ fileId }) => {
     setShowColorPicker(false);
   };
 
+  // Handler für Änderungen im Textfeld
+  const handleTagNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewTagName(e.target.value);
+  };
+
   return (
     <Container>
       <TagSectionTitle>Tags</TagSectionTitle>
@@ -81,11 +86,12 @@ const TagSelector: React.FC<TagSelectorProps> = ({ fileId }) => {
           </AddTagButton>
         ) : (
           <TagCreationContainer>
-            <TagInput
-              type="text"
+            {/* Standardisierte TextField-Komponente ersetzt das einfache TagInput */}
+            <TextField
               placeholder="Enter tag name"
               value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
+              onChange={handleTagNameChange}
+              fullWidth
               autoFocus
             />
             <AnimatePresence>
@@ -156,23 +162,6 @@ const TagCreationContainer = styled.div`
   flex-direction: column;
 `;
 
-const TagInput = styled.input`
-  background-color: ${(props) => props.theme.colors.background};
-  border: 1px solid ${(props) => props.theme.colors.divider};
-  padding: ${(props) => props.theme.spacing.sm};
-  border-radius: ${(props) => props.theme.borderRadius.sm};
-  color: ${(props) => props.theme.colors.text.primary};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  margin-bottom: ${(props) => props.theme.spacing.md};
-
-  &:focus {
-    border-color: ${(props) => props.theme.colors.primary};
-    outline: none;
-  }
-
-  &::placeholder {
-    color: ${(props) => props.theme.colors.text.disabled};
-  }
-`;
+// Das alte TagInput wurde entfernt, da es durch die standardisierte TextField-Komponente ersetzt wurde
 
 export default TagSelector;

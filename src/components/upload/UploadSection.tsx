@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import styled from "styled-components";
 import { UploadProvider, useUpload } from "../../context/UploadContext";
+import { useNavigation } from "../../context/NavigationContext";
 import DragDropFileUpload from "./DragDropFileUpload";
 import FilePreview from "./FilePreview";
 import TaggingView from "./TaggingView";
@@ -20,9 +21,22 @@ const UploadSectionWrapper: React.FC = () => {
 const UploadSectionContent: React.FC = () => {
   const { currentStep, files, goToNextStep, clearFiles, goToStep } =
     useUpload();
+  const {
+    navigateToDocuments,
+    navigateToSearch,
+    navigateToUploadStep,
+    currentUploadStep,
+  } = useNavigation();
+
+  // Synchronisiere Upload-Steps mit NavigationContext
+  useEffect(() => {
+    if (currentStep !== currentUploadStep) {
+      navigateToUploadStep(currentStep);
+    }
+  }, [currentStep, currentUploadStep, navigateToUploadStep]);
 
   // Automatisch zum nächsten Schritt, wenn Dateien ausgewählt wurden
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentStep === "selection" && files.length > 0) {
       goToNextStep();
     }
@@ -30,9 +44,13 @@ const UploadSectionContent: React.FC = () => {
 
   // Handler für die Success-View Buttons
   const handleViewDocuments = () => {
-    // In einer echten Anwendung würde dies zur Dokument-Archiv-Ansicht führen
-    console.log("View documents");
-    // Hier könnten wir zur Profil-Sektion navigieren
+    // Navigiere zur Dokument-Ansicht im Profil-Bereich
+    navigateToDocuments();
+  };
+
+  const handleSearchDocuments = () => {
+    // Navigiere zur Suchfunktion
+    navigateToSearch();
   };
 
   const handleUploadMore = () => {
@@ -78,6 +96,9 @@ const UploadSectionContent: React.FC = () => {
               <ActionButton variant="secondary" onClick={handleUploadMore}>
                 Upload More
               </ActionButton>
+              <ActionButton variant="secondary" onClick={handleSearchDocuments}>
+                Search Documents
+              </ActionButton>
             </ActionButtons>
           </ComingSoonStep>
         );
@@ -94,7 +115,7 @@ const Container = styled.div`
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: transparent; /* Vom übergeordneten Element übernehmen */
 `;
 
 // Styled Components für die "Coming Soon" Schritte
@@ -146,6 +167,8 @@ const ActionButtons = styled.div`
   display: flex;
   gap: ${(props) => props.theme.spacing.md};
   margin-top: ${(props) => props.theme.spacing.lg};
+  flex-wrap: wrap;
+  justify-content: center;
 
   @media (max-width: ${(props) => props.theme.breakpoints.sm}) {
     flex-direction: column;
