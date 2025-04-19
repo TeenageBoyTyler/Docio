@@ -1,4 +1,6 @@
-import Tag, { TagProps } from "./Tag";
+import Tag from "./Tag";
+import TagSynchronizer from "./TagSynchronizer";
 
-export { Tag, TagProps };
+// No TagProps import since it's not properly exported from Tag.tsx
+export { Tag, TagSynchronizer };
 export default Tag;

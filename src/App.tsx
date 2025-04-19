@@ -1,78 +1,64 @@
 // src/App.tsx
 import React from "react";
-import styled, { ThemeProvider } from "styled-components";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { ThemeProvider } from "styled-components";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import MainLayout from "./components/layouts/MainLayout";
+import AuthCallback from "./components/auth/AuthCallback";
+import GlobalStyles from "./styles/globalStyles"; // Changed from named import to default import
 import { theme } from "./styles/theme";
-import GlobalStyles from "./styles/globalStyles";
-import ToastProvider from "./context/ToastContext";
+
+// Import providers
+import { ToastProvider } from "./context/ToastContext";
+import { NavigationProvider } from "./context/NavigationContext";
+import ProfileProvider from "./context/ProfileContext";
 import UploadProvider from "./context/UploadContext";
 import SearchProvider from "./context/SearchContext";
-import ProfileProvider from "./context/ProfileContext";
-import { NavigationProvider } from "./context/NavigationContext";
-import MainLayout from "./components/layouts/MainLayout"; // Importiere das MainLayout
-import AuthCallback from "./components/auth/AuthCallback";
-import OfflineIndicator from "./components/common/OfflineIndicator";
-import LoadingDemo from "./components/demo/LoadingDemo";
-import EmptyDemo from "./components/demo/EmptyDemo";
-import InputDemo from "./components/demo/InputDemo";
-import ButtonDemo from "./components/demo/ButtonDemo";
-import NavigationDemo from "./components/demo/NavigationDemo";
-import HeaderDemo from "./components/demo/HeaderDemo"; // Import new HeaderDemo
-import IconDemo from "./components/demo/IconDemo";
+
+// Import TagSynchronizer for tag coordination between contexts
+import TagSynchronizer from "./components/shared/tags/TagSynchronizer";
+
+// Import any required polyfills or utils
+import "./index.css";
 
 function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider theme={theme}>
-        <GlobalStyles />
-        <ToastProvider>
-          <NavigationProvider>
+    <ThemeProvider theme={theme}>
+      <GlobalStyles />
+
+      {/* Context providers in proper order:
+          1. ToastProvider - for notifications
+          2. NavigationProvider - for app navigation
+          3. ProfileProvider - contains tag management (source of truth)
+          4. UploadProvider - needs tags from ProfileProvider
+          5. SearchProvider - needs tags from ProfileProvider
+      */}
+      <ToastProvider>
+        <NavigationProvider>
+          <ProfileProvider>
             <UploadProvider>
               <SearchProvider>
-                <ProfileProvider>
+                {/* Add TagSynchronizer to coordinate tags between contexts */}
+                <TagSynchronizer />
+
+                <Router>
                   <Routes>
-                    <Route
-                      path="/"
-                      element={
-                        <MainContainer>
-                          <OfflineIndicator />
-                          <MainLayout />
-                        </MainContainer>
-                      }
-                    />
+                    <Route path="/" element={<MainLayout />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
-                    <Route path="/demo/loading" element={<LoadingDemo />} />
-                    <Route path="/demo/empty" element={<EmptyDemo />} />
-                    <Route path="/demo/input" element={<InputDemo />} />
-                    <Route path="/demo/button" element={<ButtonDemo />} />
-                    <Route path="/demo/icons" element={<IconDemo />} />
-                    <Route
-                      path="/demo/navigation"
-                      element={<NavigationDemo />}
-                    />
-                    <Route path="/demo/header" element={<HeaderDemo />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
-                </ProfileProvider>
+                </Router>
               </SearchProvider>
             </UploadProvider>
-          </NavigationProvider>
-        </ToastProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+          </ProfileProvider>
+        </NavigationProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
-
-const MainContainer = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: ${(props) => props.theme.colors.background};
-  color: ${(props) => props.theme.colors.text.primary};
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-`;
 
 export default App;

@@ -124,21 +124,21 @@ const pulseAnimation = {
 };
 
 // Styled components
-const Container = styled.div<{ showLabel: boolean }>`
+const Container = styled.div<{ $showLabel: boolean }>`
   display: flex;
   align-items: center;
   gap: 8px;
-  height: ${(props) => (props.showLabel ? "auto" : sizeConfig.medium.size)};
+  height: ${(props) => (props.$showLabel ? "auto" : sizeConfig.medium.size)};
 `;
 
 const IconContainer = styled(motion.div)<{
-  size: "small" | "medium" | "large";
-  statusColor: string;
+  $size: "small" | "medium" | "large";
+  $statusColor: string;
 }>`
-  width: ${(props) => sizeConfig[props.size].size};
-  height: ${(props) => sizeConfig[props.size].size};
+  width: ${(props) => sizeConfig[props.$size].size};
+  height: ${(props) => sizeConfig[props.$size].size};
   border-radius: 50%;
-  background-color: ${(props) => props.statusColor};
+  background-color: ${(props) => props.$statusColor};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -146,23 +146,23 @@ const IconContainer = styled(motion.div)<{
 `;
 
 const SyncIcon = styled(motion.div)<{
-  size: "small" | "medium" | "large";
-  statusColor: string;
+  $size: "small" | "medium" | "large";
+  $statusColor: string;
 }>`
-  width: ${(props) => sizeConfig[props.size].size};
-  height: ${(props) => sizeConfig[props.size].size};
-  border: 2px solid ${(props) => props.statusColor};
+  width: ${(props) => sizeConfig[props.$size].size};
+  height: ${(props) => sizeConfig[props.$size].size};
+  border: 2px solid ${(props) => props.$statusColor};
   border-radius: 50%;
   border-top-color: transparent;
   box-sizing: border-box;
 `;
 
 const StatusText = styled.span<{
-  size: "small" | "medium" | "large";
-  statusColor: string;
+  $size: "small" | "medium" | "large";
+  $statusColor: string;
 }>`
-  font-size: ${(props) => sizeConfig[props.size].fontSize};
-  color: ${(props) => props.statusColor};
+  font-size: ${(props) => sizeConfig[props.$size].fontSize};
+  color: ${(props) => props.$statusColor};
 `;
 
 /**
@@ -219,11 +219,11 @@ const SyncIndicator: React.FC<SyncIndicatorProps> = ({
       : null;
 
   return (
-    <Container showLabel={showLabel} className={className}>
+    <Container $showLabel={showLabel} className={className}>
       <AnimatePresence mode="wait">
         <IconContainer
-          size={size}
-          statusColor={statusColor}
+          $size={size}
+          $statusColor={statusColor}
           key={status}
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -232,8 +232,8 @@ const SyncIndicator: React.FC<SyncIndicatorProps> = ({
         >
           {status === "syncing" && (
             <SyncIcon
-              size={size}
-              statusColor={statusColor}
+              $size={size}
+              $statusColor={statusColor}
               variants={animation}
               animate="rotate"
             />
@@ -250,7 +250,7 @@ const SyncIndicator: React.FC<SyncIndicatorProps> = ({
       </AnimatePresence>
 
       {showLabel && (
-        <StatusText size={size} statusColor={statusColor}>
+        <StatusText $size={size} $statusColor={statusColor}>
           {statusLabel}
         </StatusText>
       )}

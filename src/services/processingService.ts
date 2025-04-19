@@ -1,7 +1,7 @@
 import * as Tesseract from "tesseract.js";
 import * as tf from "@tensorflow/tfjs";
 import * as cocoSsd from "@tensorflow-models/coco-ssd";
-import { createWorker } from "tesseract.js";
+import { getUploadedFile } from "./FileUploadService"; // Import the new service
 
 // Definiere die Ergebnistypen für OCR und Bilderkennung
 export interface OcrResult {
@@ -60,85 +60,117 @@ export const initializeModels = async (): Promise<void> => {
 };
 
 /**
- * Extrahiert Text aus einem Bild mit Tesseract OCR
+ * Creates a default empty OcrResult
  */
-const performOcr = async (imageUrl: string): Promise<OcrResult> => {
-  try {
-    // Alternativer Ansatz mit recognize Funktion, wenn der Worker-Ansatz Probleme macht
-    const { data } = await Tesseract.recognize(imageUrl, OCR_CONFIG.lang, {
-      logger: OCR_CONFIG.logger,
-    });
-
-    const result: OcrResult = {
-      text: data.text,
-      confidence: data.confidence,
-      words: data.words.map((word) => ({
-        text: word.text,
-        confidence: word.confidence,
-        bbox: word.bbox,
-      })),
-    };
-
-    return result;
-  } catch (error) {
-    console.error("OCR Error:", error);
-    throw error;
-  }
-};
-
-/**
- * Erkennt Objekte in einem Bild mit dem COCO-SSD Modell
- */
-const detectObjects = async (imageUrl: string): Promise<DetectionResult[]> => {
-  try {
-    if (!cocoModel) {
-      await initializeModels();
-    }
-
-    // Lade das Bild
-    const img = new Image();
-    img.src = imageUrl;
-    await new Promise((resolve) => {
-      img.onload = resolve;
-    });
-
-    // Führe die Objekterkennung durch
-    if (cocoModel) {
-      const predictions = await cocoModel.detect(img);
-
-      return predictions.map((pred) => ({
-        class: pred.class,
-        score: pred.score,
-        bbox: pred.bbox,
-      }));
-    }
-
-    throw new Error("COCO-SSD model not loaded");
-  } catch (error) {
-    console.error("Object Detection Error:", error);
-    throw error;
-  }
+const createDefaultOcrResult = (): OcrResult => {
+  return {
+    text: "",
+    confidence: 0,
+    words: [],
+  };
 };
 
 /**
  * Verarbeitet eine einzelne Datei mit OCR und Bilderkennung
+ * Verwendet direkt den Data-URL-Ansatz, um Probleme mit Blob-URLs zu vermeiden
  */
 export const processFile = async (
-  fileId: string,
-  imageUrl: string
+  fileId: string
 ): Promise<ProcessingResult> => {
   const startTime = Date.now();
 
   try {
+    // Get the file from our cache using the ID
+    const uploadedFile = getUploadedFile(fileId);
+
+    if (!uploadedFile) {
+      throw new Error(`File with ID ${fileId} not found in cache`);
+    }
+
+    // Use the data URL directly from our cache - no URL conversion needed
+    const dataUrl = uploadedFile.dataUrl;
+
     // Initialisiere die Modelle, falls noch nicht geschehen
     if (!cocoModel) {
       await initializeModels();
     }
 
-    // Führe OCR und Objekterkennung parallel durch
+    // Create an image from the data URL
+    const img = new Image();
+
+    // Make sure image loads properly
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = (e) => {
+        console.error("Error loading image:", e);
+        reject(new Error("Failed to load image"));
+      };
+      // Set src after attaching event handlers
+      img.src = dataUrl;
+    });
+
+    // Set up a canvas for OCR processing
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width || 300; // Default if width not available
+    canvas.height = img.height || 300; // Default if height not available
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("Could not get 2D context from canvas");
+    }
+
+    ctx.drawImage(img, 0, 0);
+
+    // Run OCR using the canvas with robust error handling
+    const ocrPromise = Tesseract.recognize(canvas, OCR_CONFIG.lang, {
+      logger: OCR_CONFIG.logger,
+    })
+      .then((result) => {
+        // Check if the result and data exist
+        if (!result || !result.data) {
+          console.warn("OCR returned empty result");
+          return createDefaultOcrResult();
+        }
+
+        const data = result.data;
+
+        // Add null checks for every property
+        return {
+          text: data.text || "",
+          confidence: data.confidence || 0,
+          words: Array.isArray(data.words)
+            ? data.words.map((word) => ({
+                text: word?.text || "",
+                confidence: word?.confidence || 0,
+                bbox: word?.bbox || { x0: 0, y0: 0, x1: 0, y1: 0 },
+              }))
+            : [],
+        };
+      })
+      .catch((error) => {
+        console.error("OCR processing failed:", error);
+        return createDefaultOcrResult();
+      });
+
+    // Run object detection using the image element
+    const detectionPromise = cocoModel!
+      .detect(img)
+      .then((predictions) =>
+        predictions.map((pred) => ({
+          class: pred.class,
+          score: pred.score,
+          bbox: pred.bbox,
+        }))
+      )
+      .catch((error) => {
+        console.error("Object detection failed:", error);
+        return [];
+      });
+
+    // Run both processes in parallel with error handling
     const [ocrResult, detectionResult] = await Promise.all([
-      performOcr(imageUrl),
-      detectObjects(imageUrl),
+      ocrPromise,
+      detectionPromise,
     ]);
 
     return {
@@ -151,8 +183,8 @@ export const processFile = async (
     console.error("Processing Error:", error);
     return {
       fileId,
-      ocr: null,
-      detections: null,
+      ocr: createDefaultOcrResult(),
+      detections: [],
       processingTime: Date.now() - startTime,
       error: error instanceof Error ? error.message : "Unknown error",
     };
@@ -161,11 +193,10 @@ export const processFile = async (
 
 /**
  * Verarbeitet mehrere Dateien sequentiell
- * @param files Array von Dateien mit ID und URL
- * @param onProgress Callback für Fortschrittsanzeige
+ * Verwendet die neue Datei-ID-basierte Methode
  */
 export const processFiles = async (
-  files: Array<{ id: string; preview: string }>,
+  fileIds: string[],
   onProgress?: (
     processed: number,
     total: number,
@@ -173,15 +204,23 @@ export const processFiles = async (
   ) => void
 ): Promise<ProcessingResult[]> => {
   const results: ProcessingResult[] = [];
-  const total = files.length;
+  const total = fileIds.length;
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const result = await processFile(file.id, file.preview);
-    results.push(result);
+  for (let i = 0; i < fileIds.length; i++) {
+    try {
+      const fileId = fileIds[i];
+      const result = await processFile(fileId);
+      results.push(result);
 
-    if (onProgress) {
-      onProgress(i + 1, total, result);
+      if (onProgress) {
+        onProgress(i + 1, total, result);
+      }
+    } catch (error) {
+      console.error(`Error processing file at index ${i}:`, error);
+      // Continue processing other files even if one fails
+      if (onProgress) {
+        onProgress(i + 1, total);
+      }
     }
   }
 
@@ -198,7 +237,11 @@ export const saveProcessingResults = (results: ProcessingResult[]): void => {
     let allResults: Record<string, ProcessingResult> = {};
 
     if (existingResults) {
-      allResults = JSON.parse(existingResults);
+      try {
+        allResults = JSON.parse(existingResults);
+      } catch (e) {
+        console.error("Error parsing existing results, starting fresh:", e);
+      }
     }
 
     // Neue Ergebnisse hinzufügen oder aktualisieren

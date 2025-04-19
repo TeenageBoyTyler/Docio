@@ -7,6 +7,7 @@ import { EmptySearch } from "../shared/empty";
 import Icon from "../shared/icons/Icon";
 import { IconButton } from "../shared/buttons";
 import { BackButton, BackButtonContainer } from "../shared/navigation";
+import { FadeTransition, SlideTransition } from "../shared/transitions";
 
 const SearchResults: React.FC = () => {
   const {
@@ -103,29 +104,61 @@ const SearchResults: React.FC = () => {
         </FilterActions>
       </ResultsHeader>
 
-      {selectedDocuments && selectedDocuments.length > 0 && (
-        <SelectionCounter>
-          <SelectedCountText>
-            <Icon name="Check" size="small" color="#4CAF50" />
-            <span>
-              {selectedDocuments.length}{" "}
-              {selectedDocuments.length === 1 ? "item" : "items"} selected
-            </span>
-          </SelectedCountText>
-          <ClearSelectionButton
-            onClick={() =>
-              selectedDocuments.forEach((item) => unselectDocument(item.id))
-            }
+      <AnimatePresence>
+        {selectedDocuments && selectedDocuments.length > 0 && (
+          <FadeTransition
+            isVisible={selectedDocuments.length > 0}
+            duration={0.3}
+            scale={true}
           >
-            Clear
-          </ClearSelectionButton>
-        </SelectionCounter>
-      )}
+            <SelectionCounter
+              as={motion.div}
+              animate={{
+                backgroundColor:
+                  selectedDocuments.length > 5
+                    ? "rgba(135, 206, 250, 0.2)"
+                    : undefined,
+              }}
+              transition={{ duration: 0.5 }}
+            >
+              <SelectedCountText>
+                <motion.div
+                  initial={{ scale: 1 }}
+                  animate={{
+                    scale: [1, 1.2, 1],
+                    transition: {
+                      duration: 0.5,
+                      repeat: 0,
+                      repeatDelay: 2,
+                    },
+                  }}
+                >
+                  <Icon name="Check" size="small" color="#4CAF50" />
+                </motion.div>
+                <span>
+                  {selectedDocuments.length}{" "}
+                  {selectedDocuments.length === 1 ? "item" : "items"} selected
+                </span>
+              </SelectedCountText>
+              <ClearSelectionButton
+                onClick={() =>
+                  selectedDocuments.forEach((item) => unselectDocument(item.id))
+                }
+                as={motion.button}
+                whileHover={{ backgroundColor: "rgba(0, 0, 0, 0.1)" }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Clear
+              </ClearSelectionButton>
+            </SelectionCounter>
+          </FadeTransition>
+        )}
+      </AnimatePresence>
 
       <ResultsGrid>
         <AnimatePresence>
           {results &&
-            results.map((result) => {
+            results.map((result, index) => {
               const isSelected = selectedDocuments?.some(
                 (item) => item.id === result.id
               );
@@ -135,21 +168,53 @@ const SearchResults: React.FC = () => {
                   onClick={() => toggleItemSelection(result.id)}
                   as={motion.div}
                   layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  whileHover={{ scale: 1.02 }}
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                    y: 0,
+                    transition: {
+                      delay: index * 0.05,
+                      duration: 0.3,
+                      ease: "easeOut",
+                    },
+                  }}
+                  exit={{
+                    opacity: 0,
+                    scale: 0.9,
+                    transition: { duration: 0.2 },
+                  }}
+                  whileHover={{
+                    scale: 1.03,
+                    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                    transition: { duration: 0.2 },
+                  }}
                   $isSelected={!!isSelected}
                 >
                   <ItemThumbnail
                     src={result.thumbnail}
                     alt={result.title || "Document"}
                   />
-                  {isSelected && (
-                    <SelectionIndicator>
-                      <Icon name="Check" size="small" color="#000" />
-                    </SelectionIndicator>
-                  )}
+                  <AnimatePresence>
+                    {isSelected && (
+                      <SelectionIndicator
+                        as={motion.div}
+                        initial={{ opacity: 0, scale: 0 }}
+                        animate={{
+                          opacity: 1,
+                          scale: 1,
+                          transition: {
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 25,
+                          },
+                        }}
+                        exit={{ opacity: 0, scale: 0 }}
+                      >
+                        <Icon name="Check" size="small" color="#000" />
+                      </SelectionIndicator>
+                    )}
+                  </AnimatePresence>
                 </ResultItem>
               );
             })}
@@ -158,17 +223,33 @@ const SearchResults: React.FC = () => {
 
       <AnimatePresence>
         {showFloatingAction && (
-          <FloatingActionButton
-            onClick={handleProceedToActions}
-            as={motion.button}
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <SlideTransition
+            direction="up"
+            isVisible={showFloatingAction}
+            distance={40}
+            duration={0.4}
           >
-            <Icon name="ArrowRight" size="medium" color="#000" />
-          </FloatingActionButton>
+            <FloatingActionButton
+              onClick={handleProceedToActions}
+              as={motion.button}
+              whileHover={{
+                scale: 1.08,
+                boxShadow: "0 6px 10px rgba(0, 0, 0, 0.3)",
+              }}
+              whileTap={{ scale: 0.95 }}
+              animate={{
+                rotate: [0, 5, 0, -5, 0],
+                transition: {
+                  duration: 0.5,
+                  delay: 1,
+                  repeat: 1,
+                  repeatType: "reverse" as const,
+                },
+              }}
+            >
+              <Icon name="ArrowRight" size="medium" color="#000" />
+            </FloatingActionButton>
+          </SlideTransition>
         )}
       </AnimatePresence>
     </Container>

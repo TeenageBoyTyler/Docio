@@ -4,8 +4,15 @@ import React, {
   useState,
   useCallback,
   ReactNode,
+  useEffect,
 } from "react";
 import { useToast } from "./ToastContext";
+import { useProfile } from "./ProfileContext"; // Import Profile context for direct tag syncing
+import {
+  processUploadedFiles,
+  removeUploadedFile,
+  clearUploadedFiles,
+} from "../services/FileUploadService";
 
 // Definiere die unterstützten Dateiformate
 const SUPPORTED_FORMATS = ["jpg", "jpeg", "png", "gif", "pdf", "heic", "heif"];
@@ -58,6 +65,8 @@ interface UploadContextType {
   removeTagFromFile: (fileId: string, tagId: string) => void;
   createTag: (name: string, color: string) => Tag;
   setProcessedDocuments: (docs: ProcessedDocument[]) => void;
+  // Add method to update available tags from external sources
+  updateAvailableTags: (tags: Tag[]) => void;
 }
 
 const UploadContext = createContext<UploadContextType | undefined>(undefined);
@@ -76,62 +85,92 @@ interface UploadProviderProps {
   children: ReactNode;
 }
 
-// Beispiele für vordefinierte Tags
-const DEFAULT_TAGS: Tag[] = [
-  { id: "tag1", name: "Invoice", color: "#4285F4" },
-  { id: "tag2", name: "Receipt", color: "#0F9D58" },
-  { id: "tag3", name: "Contract", color: "#DB4437" },
-  { id: "tag4", name: "Personal", color: "#F4B400" },
-  { id: "tag5", name: "Work", color: "#AB47BC" },
-];
-
 // Provider-Komponente
 export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
+  // Access Profile context for direct tag syncing
+  const { addExternalTags, availableTags: profileTags } = useProfile();
+
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [currentStep, setCurrentStep] = useState<UploadStep>("selection");
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
-  const [availableTags, setAvailableTags] = useState<Tag[]>(DEFAULT_TAGS);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]); // Always start with empty tags
   const [processedDocuments, setProcessedDocuments] = useState<
     ProcessedDocument[]
   >([]);
   const { showToast } = useToast();
 
+  // Sync tags from Profile to Upload whenever Profile tags change
+  useEffect(() => {
+    if (profileTags.length > 0) {
+      console.log(
+        "[UploadContext] Syncing tags from Profile:",
+        profileTags.length
+      );
+      setAvailableTags(profileTags);
+    }
+  }, [profileTags]);
+
+  // Debugging log to confirm no default tags
+  useEffect(() => {
+    console.log(
+      "[UploadContext] Initialized with",
+      availableTags.length,
+      "tags"
+    );
+  }, []);
+
   // Dateien hinzufügen
   const addFiles = useCallback(
-    (newFiles: File[]) => {
-      // Prüfe, ob das Format unterstützt wird
-      const validFiles = newFiles.filter((file) => {
-        const extension = file.name.split(".").pop()?.toLowerCase() || "";
-        if (!SUPPORTED_FORMATS.includes(extension)) {
-          showToast("Unsupported filetype", "error");
-          return false;
-        }
-        return true;
-      });
+    async (newFiles: File[]) => {
+      try {
+        // Prüfe, ob das Format unterstützt wird
+        const validFiles = newFiles.filter((file) => {
+          const extension = file.name.split(".").pop()?.toLowerCase() || "";
+          if (!SUPPORTED_FORMATS.includes(extension)) {
+            showToast("Unsupported filetype", "error");
+            return false;
+          }
+          return true;
+        });
 
-      // Filter out duplicates based on filename and size
-      const nonDuplicateFiles = validFiles.filter((newFile) => {
-        const isDuplicate = files.some(
-          (existingFile) =>
-            existingFile.name === newFile.name &&
-            existingFile.size === newFile.size
-        );
+        // Filter out duplicates based on filename and size
+        const nonDuplicateFiles = validFiles.filter((newFile) => {
+          const isDuplicate = files.some(
+            (existingFile) =>
+              existingFile.name === newFile.name &&
+              existingFile.size === newFile.size
+          );
 
-        if (isDuplicate) {
-          showToast(`"${newFile.name}" is already in the queue`, "info");
-          return false;
-        }
-        return true;
-      });
+          if (isDuplicate) {
+            showToast(`"${newFile.name}" is already in the queue`, "info");
+            return false;
+          }
+          return true;
+        });
 
-      // Erstelle UploadFile-Objekte mit IDs, Vorschau-URLs und leeren Tags
-      const newUploadFiles = nonDuplicateFiles.map((file) => {
-        const id = Math.random().toString(36).substring(2, 11);
-        const preview = URL.createObjectURL(file);
-        return Object.assign(file, { id, preview, tags: [] }) as UploadFile;
-      });
+        if (nonDuplicateFiles.length === 0) return;
 
-      setFiles((prevFiles) => [...prevFiles, ...newUploadFiles]);
+        // Use FileUploadService to immediately convert files to data URLs
+        const processedFiles = await processUploadedFiles(nonDuplicateFiles);
+
+        // Convert to UploadFile format
+        const newUploadFiles = processedFiles.map((file) => {
+          return {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            lastModified: 0, // Default value as this isn't in UploadedFile
+            id: file.id,
+            preview: file.dataUrl, // Use dataUrl as preview
+            tags: [] as Tag[],
+          } as UploadFile;
+        });
+
+        setFiles((prevFiles) => [...prevFiles, ...newUploadFiles]);
+      } catch (error) {
+        console.error("Error adding files:", error);
+        showToast("Failed to process files. Please try again.", "error");
+      }
     },
     [showToast, files]
   );
@@ -140,12 +179,8 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
   const removeFile = useCallback(
     (id: string) => {
       setFiles((prevFiles) => {
-        // Find the file to get its preview URL
-        const fileToRemove = prevFiles.find((file) => file.id === id);
-        if (fileToRemove) {
-          // Revoke the Object URL to prevent memory leaks
-          URL.revokeObjectURL(fileToRemove.preview);
-        }
+        // Remove the file from the FileUploadService cache
+        removeUploadedFile(id);
 
         const updatedFiles = prevFiles.filter((file) => file.id !== id);
 
@@ -165,16 +200,14 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
 
   // Alle Dateien entfernen
   const clearFiles = useCallback(() => {
-    // Revoke all Object URLs to prevent memory leaks
-    files.forEach((file) => {
-      URL.revokeObjectURL(file.preview);
-    });
+    // Clear all files from the FileUploadService cache
+    clearUploadedFiles();
 
     setFiles([]);
     setProcessedDocuments([]);
     // Zurücksetzen auf den Auswahlschritt
     setCurrentStep("selection");
-  }, [files]);
+  }, []);
 
   // Zu einem bestimmten Schritt gehen
   const goToStep = useCallback((step: UploadStep) => {
@@ -249,15 +282,43 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
     );
   }, []);
 
-  const createTag = useCallback((name: string, color: string) => {
-    const newTag = {
-      id: `tag-${Math.random().toString(36).substring(2, 11)}`,
-      name,
-      color,
-    };
+  // MODIFIED: Direct sync to Profile
+  const createTag = useCallback(
+    (name: string, color: string) => {
+      // Create the new tag
+      const newTag = {
+        id: `tag-${Math.random().toString(36).substring(2, 11)}`,
+        name: name.trim(),
+        color,
+      };
 
-    setAvailableTags((prevTags) => [...prevTags, newTag]);
-    return newTag;
+      // Add to local state first
+      setAvailableTags((prevTags) => [...prevTags, newTag]);
+
+      // IMPORTANT: Directly sync to Profile context
+      console.log(
+        `[UploadContext] Created tag "${name}", syncing to Profile...`
+      );
+      setTimeout(() => {
+        addExternalTags([newTag]).catch((err) =>
+          console.error(
+            "[UploadContext] Error syncing new tag to Profile:",
+            err
+          )
+        );
+      }, 0);
+
+      return newTag;
+    },
+    [addExternalTags]
+  );
+
+  // Add method to update available tags from outside
+  const updateAvailableTags = useCallback((tags: Tag[]) => {
+    console.log(`[UploadContext] Updating available tags:`, tags.length);
+    if (tags && tags.length > 0) {
+      setAvailableTags(tags);
+    }
   }, []);
 
   // Automatisches Hinzufügen von erkannten Tags aus den Verarbeitungsergebnissen
@@ -321,14 +382,13 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
     createTag,
   ]);
 
-  // Bereinige die ObjectURLs beim Unmount
+  // Bereinige die Dateien im Cache beim Unmount
   React.useEffect(() => {
     return () => {
-      files.forEach((file) => {
-        URL.revokeObjectURL(file.preview);
-      });
+      // Clean up all files from the FileUploadService cache when the component unmounts
+      clearUploadedFiles();
     };
-  }, [files]);
+  }, []);
 
   const value = {
     files,
@@ -347,6 +407,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
     removeTagFromFile,
     createTag,
     setProcessedDocuments,
+    updateAvailableTags, // Add the new method to the context value
   };
 
   return (

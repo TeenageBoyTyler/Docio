@@ -1,194 +1,288 @@
 // src/components/profile/ProfileSection.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import styled from "styled-components";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useProfile, ProfileView } from "../../context/ProfileContext";
 import { useNavigation } from "../../context/NavigationContext";
 
-// Unterkomponenten importieren
+// Import transition system
+import {
+  PageTransition,
+  TransitionDirection,
+  useTransitionDirection,
+  ModalTransition,
+  FadeTransition,
+  SlideTransition,
+} from "../shared/transitions";
+
+// Components
 import ProfileHome from "./ProfileHome";
 import DocumentsArchive from "./DocumentsArchive";
 import TagsManagement from "./TagsManagement";
 import ProcessingSettings from "./ProcessingSettings";
 import CloudProviderSelector from "./CloudProviderSelector";
-// Import the Icon component
 import { Icon } from "../shared/icons";
 
+// Define staggered animation variants for child elements
+const staggerContainerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      staggerChildren: 0.05,
+      staggerDirection: -1,
+    },
+  },
+};
+
+const staggerItemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      damping: 15,
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: 10,
+    transition: {
+      duration: 0.2,
+    },
+  },
+};
+
 const ProfileSection: React.FC = () => {
-  const {
-    currentView,
-    setCurrentView,
-    isCloudConnected,
-    cloudProvider,
-    documentCount,
-    tagCount,
-    connectToCloud,
-  } = useProfile();
+  const { currentView, setCurrentView, isCloudConnected, cloudProvider } =
+    useProfile();
 
-  // Get navigation context for cross-section navigation
   const { navigateToProfileView, currentProfileView } = useNavigation();
-
-  // State für den Cloud-Provider-Selector
   const [showProviderSelector, setShowProviderSelector] = useState(false);
+  const viewChangeTimestamp = useRef(Date.now());
 
-  // Synchronisiere Profile-View mit NavigationContext
+  // Define profile view position map for spatial navigation
+  const profileViewPositionMap: Record<string, number> = {
+    home: 0,
+    documents: 1,
+    tags: 2,
+    settings: 3,
+  };
+
+  // Get the transition direction based on the current and previous view
+  const { direction, previous } = useTransitionDirection({
+    current: currentView,
+    positionMap: profileViewPositionMap,
+  });
+
+  // Update timestamp when view changes to enable entrance animations
+  useEffect(() => {
+    if (previous !== currentView) {
+      viewChangeTimestamp.current = Date.now();
+    }
+  }, [currentView, previous]);
+
+  // Synchronize with NavigationContext
   useEffect(() => {
     if (currentView !== currentProfileView) {
       navigateToProfileView(currentView);
     }
   }, [currentView, currentProfileView, navigateToProfileView]);
 
-  // Animation-Varianten für die Seitenübergänge
-  const pageVariants = {
-    initial: {
-      opacity: 0,
-      x: 20,
-    },
-    in: {
-      opacity: 1,
-      x: 0,
-    },
-    out: {
-      opacity: 0,
-      x: -20,
-    },
+  // Enhanced transition parameters based on view
+  const getTransitionParams = (view: string) => {
+    const baseParams = {
+      direction,
+    };
+
+    // Customize transition based on view
+    switch (view) {
+      case "home":
+        return {
+          ...baseParams,
+          duration: 0.5, // slightly longer for the main profile view
+          distance: 100, // more dramatic slide for the home view
+        };
+      case "documents":
+        return {
+          ...baseParams,
+          duration: 0.45,
+          distance: 90, // emphasize the document grid transition
+        };
+      case "tags":
+        return {
+          ...baseParams,
+          duration: 0.4,
+          distance: 80, // slightly more subtle for tags
+        };
+      case "settings":
+        return {
+          ...baseParams,
+          duration: 0.5,
+          distance: 90, // more pronounced for settings which has forms
+        };
+      default:
+        return {
+          ...baseParams,
+          duration: 0.4,
+          distance: 70,
+        };
+    }
   };
 
-  // Gehe zum Dokument-Archiv zurück, wenn von einer anderen Seite kommend
-  // Dokumente ausgewählt wurden
-  useEffect(() => {
-    // Dieser Effekt kann später implementiert werden
-  }, []);
-
-  // Nur Cloud-Verbindung anzeigen, wenn keine Verbindung besteht
+  // Show cloud connection view if not connected
   if (!isCloudConnected) {
     return (
       <Container>
-        <EmptyStateContainer>
-          <EmptyStateIcon>
-            {/* Replace SVG with Icon component */}
+        <EmptyStateContainer
+          as={motion.div}
+          variants={staggerContainerVariants}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+        >
+          <EmptyStateIcon as={motion.div} variants={staggerItemVariants}>
             <Icon name="Cloud" size="large" />
           </EmptyStateIcon>
-          <EmptyStateTitle>Connect to Cloud Storage</EmptyStateTitle>
-          <EmptyStateText>
+          <EmptyStateTitle as={motion.div} variants={staggerItemVariants}>
+            Connect to Cloud Storage
+          </EmptyStateTitle>
+          <EmptyStateText as={motion.div} variants={staggerItemVariants}>
             Connect to a cloud storage provider to store your documents securely
             and access all features.
           </EmptyStateText>
-          <ButtonGroup>
+          <ButtonGroup as={motion.div} variants={staggerItemVariants}>
             <ConnectButton onClick={() => setShowProviderSelector(true)}>
               Select Provider
             </ConnectButton>
           </ButtonGroup>
 
-          <AnimatePresence>
-            {showProviderSelector && (
-              <ModalOverlay
-                as={motion.div}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowProviderSelector(false)}
-              >
-                <ModalContent onClick={(e) => e.stopPropagation()}>
-                  <CloudProviderSelector
-                    onClose={() => setShowProviderSelector(false)}
-                  />
-                </ModalContent>
-              </ModalOverlay>
-            )}
-          </AnimatePresence>
+          {/* Use ModalTransition for the cloud provider selector */}
+          <ModalTransition
+            isOpen={showProviderSelector}
+            onClose={() => setShowProviderSelector(false)}
+            maxWidth="500px"
+            withPadding={false}
+          >
+            <CloudProviderSelector
+              onClose={() => setShowProviderSelector(false)}
+            />
+          </ModalTransition>
         </EmptyStateContainer>
       </Container>
     );
   }
 
-  // Rendere die entsprechende Ansicht basierend auf currentView
   return (
     <Container>
-      <AnimatePresence mode="wait">
-        {currentView === "home" && (
-          <PageContainer
-            key="home"
-            as={motion.div}
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={{ type: "tween", duration: 0.3 }}
-          >
-            <ProfileActionBar>
-              <ProviderButton onClick={() => setShowProviderSelector(true)}>
-                <ProviderIcon>
-                  {/* Replace SVG with Icon component */}
-                  <Icon name="Network" size="small" />
-                </ProviderIcon>
-                Change Provider
-              </ProviderButton>
-            </ProfileActionBar>
-            <ProfileHome onNavigate={setCurrentView} />
-          </PageContainer>
-        )}
+      <PageContainer>
+        {/* Use AnimatePresence to handle view mounting/unmounting */}
+        <AnimatePresence mode="wait">
+          {currentView === "home" && (
+            <PageTransition {...getTransitionParams("home")} key="profile-home">
+              <ContentWrapper>
+                <ActionBarWrapper>
+                  <ProfileActionBar
+                    as={motion.div}
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <ProviderButton
+                      onClick={() => setShowProviderSelector(true)}
+                    >
+                      <ProviderIcon>
+                        <Icon name="Network" size="small" />
+                      </ProviderIcon>
+                      Change Provider
+                    </ProviderButton>
+                  </ProfileActionBar>
+                  <motion.div
+                    variants={staggerContainerVariants}
+                    initial="hidden"
+                    animate="show"
+                    exit="exit"
+                  >
+                    <ProfileHome onNavigate={setCurrentView} />
+                  </motion.div>
+                </ActionBarWrapper>
+              </ContentWrapper>
+            </PageTransition>
+          )}
 
-        {currentView === "documents" && (
-          <PageContainer
-            key="documents"
-            as={motion.div}
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={{ type: "tween", duration: 0.3 }}
-          >
-            <DocumentsArchive onNavigate={setCurrentView} />
-          </PageContainer>
-        )}
+          {/* Documents Archive */}
+          {currentView === "documents" && (
+            <PageTransition
+              {...getTransitionParams("documents")}
+              key="profile-documents"
+            >
+              <ContentWrapper>
+                <motion.div
+                  variants={staggerContainerVariants}
+                  initial="hidden"
+                  animate="show"
+                  exit="exit"
+                >
+                  <DocumentsArchive onNavigate={setCurrentView} />
+                </motion.div>
+              </ContentWrapper>
+            </PageTransition>
+          )}
 
-        {currentView === "tags" && (
-          <PageContainer
-            key="tags"
-            as={motion.div}
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={{ type: "tween", duration: 0.3 }}
-          >
-            <TagsManagement onNavigate={setCurrentView} />
-          </PageContainer>
-        )}
+          {/* Tags Management */}
+          {currentView === "tags" && (
+            <PageTransition {...getTransitionParams("tags")} key="profile-tags">
+              <ContentWrapper>
+                <motion.div
+                  variants={staggerContainerVariants}
+                  initial="hidden"
+                  animate="show"
+                  exit="exit"
+                >
+                  <TagsManagement onNavigate={setCurrentView} />
+                </motion.div>
+              </ContentWrapper>
+            </PageTransition>
+          )}
 
-        {currentView === "settings" && (
-          <PageContainer
-            key="settings"
-            as={motion.div}
-            initial="initial"
-            animate="in"
-            exit="out"
-            variants={pageVariants}
-            transition={{ type: "tween", duration: 0.3 }}
-          >
-            <ProcessingSettings onNavigate={setCurrentView} />
-          </PageContainer>
-        )}
-      </AnimatePresence>
+          {/* Processing Settings */}
+          {currentView === "settings" && (
+            <PageTransition
+              {...getTransitionParams("settings")}
+              key="profile-settings"
+            >
+              <ContentWrapper>
+                <motion.div
+                  variants={staggerContainerVariants}
+                  initial="hidden"
+                  animate="show"
+                  exit="exit"
+                >
+                  <ProcessingSettings onNavigate={setCurrentView} />
+                </motion.div>
+              </ContentWrapper>
+            </PageTransition>
+          )}
+        </AnimatePresence>
+      </PageContainer>
 
-      <AnimatePresence>
-        {showProviderSelector && (
-          <ModalOverlay
-            as={motion.div}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowProviderSelector(false)}
-          >
-            <ModalContent onClick={(e) => e.stopPropagation()}>
-              <CloudProviderSelector
-                onClose={() => setShowProviderSelector(false)}
-              />
-            </ModalContent>
-          </ModalOverlay>
-        )}
-      </AnimatePresence>
+      {/* Use ModalTransition for the cloud provider selector */}
+      <ModalTransition
+        isOpen={showProviderSelector}
+        onClose={() => setShowProviderSelector(false)}
+        maxWidth="500px"
+        withPadding={false}
+      >
+        <CloudProviderSelector onClose={() => setShowProviderSelector(false)} />
+      </ModalTransition>
     </Container>
   );
 };
@@ -200,7 +294,7 @@ const Container = styled.div`
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background-color: transparent; /* Vom übergeordneten Element übernehmen */
+  background-color: transparent;
   position: relative;
 `;
 
@@ -210,7 +304,7 @@ const PageContainer = styled.div`
   height: 100%;
   width: 100%;
   overflow-y: auto;
-  padding: ${(props) => props.theme.spacing.xl};
+  position: relative;
 
   /* Subtle scrollbar styling */
   &::-webkit-scrollbar {
@@ -231,6 +325,21 @@ const PageContainer = styled.div`
   }
 `;
 
+// New ContentWrapper to ensure consistent vertical centering
+const ContentWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: ${(props) => props.theme.spacing.xl};
+`;
+
+const ActionBarWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+`;
+
 const ProfileActionBar = styled.div`
   display: flex;
   justify-content: flex-end;
@@ -247,10 +356,13 @@ const ProviderButton = styled.button`
   font-size: ${(props) => props.theme.typography.fontSize.sm};
   border-radius: ${(props) => props.theme.borderRadius.sm};
   border: 1px solid ${(props) => props.theme.colors.divider};
+  transition: all ${(props) => props.theme.transitions.short};
 
   &:hover {
     background-color: ${(props) => props.theme.colors.background};
     color: ${(props) => props.theme.colors.text.primary};
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px ${(props) => props.theme.colors.shadow}40;
   }
 `;
 
@@ -311,31 +423,14 @@ const ConnectButton = styled.button`
   border-radius: ${(props) => props.theme.borderRadius.md};
   font-size: ${(props) => props.theme.typography.fontSize.md};
   font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  transition: background-color ${(props) => props.theme.transitions.short};
+  transition: all ${(props) => props.theme.transitions.short};
 
   &:hover {
     background-color: ${(props) =>
       props.theme.colors.primary}CC; /* 80% opacity */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px ${(props) => props.theme.colors.shadow};
   }
-`;
-
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: ${(props) => props.theme.spacing.lg};
-`;
-
-const ModalContent = styled.div`
-  max-width: 90%;
-  max-height: 90%;
 `;
 
 export default ProfileSection;

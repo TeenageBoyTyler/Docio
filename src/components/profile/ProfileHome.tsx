@@ -6,6 +6,89 @@ import { useProfile, ProfileView } from "../../context/ProfileContext";
 // Importieren der standardisierten SyncIndicator-Komponente
 import { SyncIndicator } from "../shared/loading";
 import { Button } from "../shared/buttons";
+// Import der standardisierten Navigation-Komponenten
+import { HeaderContainer, Title } from "../shared/navigation";
+// Import der Icon-Komponente
+import { Icon } from "../shared/icons";
+
+// Define enhanced staggered animation variants
+const staggerContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.05,
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      staggerChildren: 0.05,
+      staggerDirection: -1,
+    },
+  },
+};
+
+const staggerItemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      damping: 15,
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: 10,
+    transition: {
+      duration: 0.2,
+    },
+  },
+};
+
+// Animation variants for special elements
+const navButtonVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: (custom: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      damping: 15,
+      delay: 0.15 + custom * 0.08,
+    },
+  }),
+  exit: {
+    opacity: 0,
+    y: 10,
+    scale: 0.98,
+    transition: {
+      duration: 0.15,
+    },
+  },
+  hover: {
+    y: -5,
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+  },
+};
+
+const statValueVariants = {
+  hidden: { opacity: 0, scale: 0.5 },
+  visible: (custom: number) => ({
+    opacity: 1,
+    scale: 1,
+    transition: {
+      delay: 0.3 + custom * 0.1,
+      duration: 0.5,
+      type: "spring",
+      stiffness: 200,
+    },
+  }),
+};
 
 interface ProfileHomeProps {
   onNavigate: (view: ProfileView) => void;
@@ -39,18 +122,39 @@ const ProfileHome: React.FC<ProfileHomeProps> = ({ onNavigate }) => {
   };
 
   return (
-    <Container>
-      <Header>
-        <UserInfo>
-          <UserAvatar>D</UserAvatar>
-          <UserDetails>
-            <UserName>Docio User</UserName>
-            <UserEmail>Connected to {cloudProvider}</UserEmail>
-          </UserDetails>
-        </UserInfo>
-      </Header>
+    <Container
+      as={motion.div}
+      variants={staggerContainerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      {/* Add standardized HeaderContainer */}
+      <HeaderContainer as={motion.div} variants={staggerItemVariants}>
+        <Title>My Profile</Title>
+      </HeaderContainer>
 
-      <StorageInfo>
+      <UserInfo as={motion.div} variants={staggerItemVariants}>
+        <UserAvatar
+          as={motion.div}
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            delay: 0.2,
+            duration: 0.6,
+          }}
+        >
+          D
+        </UserAvatar>
+        <UserDetails>
+          <UserName>Docio User</UserName>
+          <UserEmail>Connected to {cloudProvider}</UserEmail>
+        </UserDetails>
+      </UserInfo>
+
+      <StorageInfo as={motion.div} variants={staggerItemVariants}>
         <StorageHeader>
           <StorageTitle>Cloud Storage</StorageTitle>
           <StorageStatus>
@@ -64,7 +168,16 @@ const ProfileHome: React.FC<ProfileHomeProps> = ({ onNavigate }) => {
 
         <StorageUsage>
           <UsageProgressBg>
-            <UsageProgress width={storagePercentage} />
+            <UsageProgress
+              width={0}
+              as={motion.div}
+              animate={{ width: `${storagePercentage}%` }}
+              transition={{
+                duration: 1,
+                delay: 0.5,
+                ease: [0.165, 0.84, 0.44, 1], // cubic-bezier easing for more polish
+              }}
+            />
           </UsageProgressBg>
           <UsageText>
             {storage.used} MB of {storage.total} MB used ({storagePercentage}%)
@@ -77,7 +190,7 @@ const ProfileHome: React.FC<ProfileHomeProps> = ({ onNavigate }) => {
             <SyncIndicator
               status={getSyncStatus()}
               size="medium"
-              showLabel
+              showLabel={true}
               showWhenIdle={true}
               customLabels={{
                 idle: syncStatus.hasOfflineChanges
@@ -96,96 +209,100 @@ const ProfileHome: React.FC<ProfileHomeProps> = ({ onNavigate }) => {
 
             {/* Sync-Button bei ausstehenden Änderungen */}
             {syncStatus.hasOfflineChanges && !syncStatus.syncInProgress && (
-              <SyncButton onClick={forceSynchronize}>Sync Now</SyncButton>
+              <SyncButton
+                onClick={forceSynchronize}
+                as={motion.button}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.7 }}
+                whileHover={{
+                  scale: 1.05,
+                  y: -2,
+                  backgroundColor: "rgba(66, 133, 244, 0.1)",
+                }}
+              >
+                Sync Now
+              </SyncButton>
             )}
           </SyncStatusContainer>
         )}
       </StorageInfo>
 
-      <StatsList>
+      <StatsList as={motion.div} variants={staggerItemVariants}>
         <StatItem>
-          <StatValue>{documentCount}</StatValue>
+          <StatValue as={motion.span} variants={statValueVariants} custom={0}>
+            {documentCount}
+          </StatValue>
           <StatLabel>Documents</StatLabel>
         </StatItem>
         <StatItem>
-          <StatValue>{tagCount}</StatValue>
+          <StatValue as={motion.span} variants={statValueVariants} custom={1}>
+            {tagCount}
+          </StatValue>
           <StatLabel>Tags</StatLabel>
         </StatItem>
       </StatsList>
 
-      <NavSection>
-        <NavButton onClick={() => onNavigate("documents")}>
+      <NavSection as={motion.div} variants={staggerItemVariants}>
+        <NavButton
+          key="nav-documents"
+          onClick={() => onNavigate("documents")}
+          as={motion.button}
+          variants={navButtonVariants}
+          custom={0}
+          whileHover="hover"
+          whileTap={{ scale: 0.98 }}
+        >
           <NavButtonIcon>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <path d="M14 2v6h6" />
-              <path d="M16 13H8" />
-              <path d="M16 17H8" />
-              <path d="M10 9H8" />
-            </svg>
+            <Icon name="FileText" size="medium" />
           </NavButtonIcon>
           <NavButtonText>My Documents</NavButtonText>
         </NavButton>
 
-        <NavButton onClick={() => onNavigate("tags")}>
+        <NavButton
+          key="nav-tags"
+          onClick={() => onNavigate("tags")}
+          as={motion.button}
+          variants={navButtonVariants}
+          custom={1}
+          whileHover="hover"
+          whileTap={{ scale: 0.98 }}
+        >
           <NavButtonIcon>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M9 5H2v7l6.29 6.29c.39.39 1.02.39 1.41 0l6.3-6.3a1 1 0 0 0 0-1.41l-6.29-6.29A1 1 0 0 0 9 5Z" />
-              <path d="M6 9.01V9" />
-              <path d="m15 5 6.3 6.3a1 1 0 0 1 0 1.4l-6.3 6.3a1 1 0 0 1-1.4 0L7.7 13" />
-            </svg>
+            <Icon name="Tags" size="medium" />
           </NavButtonIcon>
           <NavButtonText>My Tags</NavButtonText>
         </NavButton>
 
-        <NavButton onClick={() => onNavigate("settings")}>
+        <NavButton
+          key="nav-settings"
+          onClick={() => onNavigate("settings")}
+          as={motion.button}
+          variants={navButtonVariants}
+          custom={2}
+          whileHover="hover"
+          whileTap={{ scale: 0.98 }}
+        >
           <NavButtonIcon>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
+            <Icon name="Settings" size="medium" />
           </NavButtonIcon>
           <NavButtonText>Processing Settings</NavButtonText>
         </NavButton>
       </NavSection>
 
-      <RecentActivity>
+      <RecentActivity as={motion.div} variants={staggerItemVariants}>
         <SectionTitle>Recent Activity</SectionTitle>
 
         {lastActivity.length > 0 ? (
           <ActivityList>
             {lastActivity.slice(0, 5).map((activity, index) => (
-              <ActivityItem key={index}>
+              <ActivityItem
+                key={`activity-${index}-${activity.timestamp}`}
+                as={motion.div}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6 + index * 0.08 }}
+              >
                 <ActivityText>{activity.action}</ActivityText>
                 <ActivityTime>
                   {new Date(activity.timestamp).toLocaleString()}
@@ -208,13 +325,10 @@ const Container = styled.div`
   width: 100%;
 `;
 
-const Header = styled.div`
-  margin-bottom: ${(props) => props.theme.spacing.xl};
-`;
-
 const UserInfo = styled.div`
   display: flex;
   align-items: center;
+  margin-bottom: ${(props) => props.theme.spacing.xl};
 `;
 
 const UserAvatar = styled.div`
@@ -331,9 +445,11 @@ const SyncButton = styled.button`
   border: 1px solid ${(props) => props.theme.colors.primary};
   border-radius: ${(props) => props.theme.borderRadius.sm};
   cursor: pointer;
+  transition: all ${(props) => props.theme.transitions.short};
 
   &:hover {
     background-color: ${(props) => props.theme.colors.primary}20;
+    transform: translateY(-2px);
   }
 `;
 
@@ -374,7 +490,7 @@ const NavButton = styled.button`
   padding: ${(props) => props.theme.spacing.md};
   border-radius: ${(props) => props.theme.borderRadius.md};
   text-align: left;
-  transition: background-color ${(props) => props.theme.transitions.short};
+  transition: all ${(props) => props.theme.transitions.short};
 
   &:hover {
     background-color: ${(props) =>

@@ -1,27 +1,28 @@
 // src/components/profile/TagsManagement.tsx
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useProfile, ProfileView } from "../../context/ProfileContext";
 import { Tag as TagType } from "../../context/UploadContext";
+import { triggerTagSync } from "../shared/tags/TagSynchronizer"; // Import sync trigger
 
-// Importieren der standardisierten Komponenten
+// Import standardized components
 import Tag from "../shared/tags/Tag";
 import { EmptyCollection } from "../shared/empty";
-import { Spinner } from "../shared/loading";
+import { Spinner, LoadingOverlay } from "../shared/loading";
 import { Button, IconButton } from "../shared/buttons";
 import { TextField } from "../shared/inputs";
 import { ColorPicker, ColorOption } from "../shared/inputs";
-// Import der standardisierten Navigation-Komponenten
 import { BackButton, HeaderContainer, Title } from "../shared/navigation";
-// Import der neuen Icon-Komponente
 import { Icon } from "../shared/icons";
+
+// Import transition components
+import { FadeTransition, ModalTransition } from "../shared/transitions";
 
 interface TagsManagementProps {
   onNavigate: (view: ProfileView) => void;
 }
 
-// Typ für den Bearbeitungs-Modus
 type EditMode = "create" | "edit" | null;
 
 const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
@@ -32,78 +33,242 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
     deleteTag,
     loadTags,
     documents,
-    isLoading,
+    isLoading: globalLoading,
+    deduplicateTags,
   } = useProfile();
 
-  // State für den Tag-Editor
+  // State for the tag editor
   const [editMode, setEditMode] = useState<EditMode>(null);
   const [editingTag, setEditingTag] = useState<TagType | null>(null);
   const [tagName, setTagName] = useState("");
-  const [tagColor, setTagColor] = useState("#4285F4"); // Default Blau
+  const [tagColor, setTagColor] = useState("#4285F4");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0); // Added for forced refreshes
+  const [lastSyncTime, setLastSyncTime] = useState(Date.now());
 
-  // Lade Tags beim Mounten
+  // Load tags on mount and deduplicate if needed, with improved sync
   useEffect(() => {
-    loadTags();
+    const initializeData = async () => {
+      console.log("[TagsManagement] Initializing tag data");
+      setIsLoading(true);
+      try {
+        // Force a sync to ensure we have the latest tags
+        triggerTagSync();
+
+        // Load tags from Profile
+        await loadTags();
+
+        // Check for duplicate tags and deduplicate if needed
+        if (
+          availableTags.length > 0 &&
+          availableTags.some((tag1, i) =>
+            availableTags.some(
+              (tag2, j) =>
+                i !== j && tag1.name.toLowerCase() === tag2.name.toLowerCase()
+            )
+          )
+        ) {
+          console.log(
+            "[TagsManagement] Found duplicate tags, deduplicating..."
+          );
+          await deduplicateTags();
+
+          // Force refresh the tag list display
+          setRefreshKey((prev) => prev + 1);
+
+          // Force another sync to update all contexts
+          setTimeout(() => {
+            triggerTagSync();
+          }, 500);
+        }
+      } catch (error) {
+        console.error("[TagsManagement] Error initializing tag data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeData();
+
+    // Periodic sync to ensure tags are up to date
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      if (now - lastSyncTime > 3000) {
+        // Every 3 seconds
+        console.log("[TagsManagement] Periodic tag refresh");
+        loadTags();
+        triggerTagSync();
+        setLastSyncTime(now);
+      }
+    }, 3000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Funktionen zum Zählen der Dokumente pro Tag
+  // Count documents with tag
   const getTagUsageCount = (tagId: string) => {
     return documents.filter((doc) => doc.tags.includes(tagId)).length;
   };
 
-  // Handler für das Öffnen des Tag-Editors für einen neuen Tag
+  // Handler for opening tag editor for new tag
   const handleCreateTag = () => {
     setEditMode("create");
     setEditingTag(null);
     setTagName("");
-    setTagColor("#4285F4"); // Default auf Blau
+    setTagColor("#4285F4");
+    setErrorMessage(null);
   };
 
-  // Handler für das Öffnen des Tag-Editors für einen bestehenden Tag
+  // Handler for opening tag editor for existing tag
   const handleEditTag = (tag: TagType) => {
+    console.log(`[TagsManagement] Editing tag:`, tag);
     setEditMode("edit");
     setEditingTag(tag);
     setTagName(tag.name);
     setTagColor(tag.color);
+    setErrorMessage(null);
   };
 
-  // Handler für das Abbrechen der Bearbeitung
+  // Handler for canceling edit
   const handleCancelEdit = () => {
     setEditMode(null);
     setEditingTag(null);
+    setErrorMessage(null);
   };
 
-  // Handler für das Speichern eines Tags
+  // Enhanced handler for saving tag with better error handling and refresh logic
   const handleSaveTag = async () => {
-    if (!tagName.trim()) return;
+    // Validate input
+    if (!tagName.trim()) {
+      setErrorMessage("Tag name cannot be empty");
+      return;
+    }
 
-    if (editMode === "create") {
-      const newTag = await createTag(tagName.trim(), tagColor);
-      if (newTag) {
-        setEditMode(null);
+    // Check for duplicate tag names
+    const isDuplicate = availableTags.some(
+      (tag) =>
+        tag.name.toLowerCase().trim() === tagName.trim().toLowerCase() &&
+        (!editingTag || tag.id !== editingTag.id)
+    );
+
+    if (isDuplicate) {
+      setErrorMessage("A tag with this name already exists");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      if (editMode === "create") {
+        console.log(
+          `[TagsManagement] Creating new tag: "${tagName}" with color ${tagColor}`
+        );
+        const newTag = await createTag(tagName.trim(), tagColor);
+        if (newTag) {
+          setEditMode(null);
+          // Force reload to ensure UI is up to date
+          await loadTags();
+          // Force refresh the component
+          setRefreshKey((prev) => prev + 1);
+
+          // Trigger sync to update other contexts
+          setTimeout(() => {
+            triggerTagSync();
+          }, 500);
+
+          console.log(`[TagsManagement] Tag created successfully:`, newTag);
+        } else {
+          setErrorMessage("Failed to create tag");
+        }
+      } else if (editMode === "edit" && editingTag) {
+        console.log(
+          `[TagsManagement] Updating tag "${editingTag.name}" -> "${tagName}", color: ${tagColor}`
+        );
+        const success = await updateTag(
+          editingTag.id,
+          tagName.trim(),
+          tagColor
+        );
+        if (success) {
+          setEditMode(null);
+          setEditingTag(null);
+          // Force reload to ensure UI is up to date
+          await loadTags();
+          // Force refresh the component
+          setRefreshKey((prev) => prev + 1);
+
+          // Trigger sync to update other contexts
+          setTimeout(() => {
+            triggerTagSync();
+          }, 500);
+
+          console.log(`[TagsManagement] Tag updated successfully`);
+        } else {
+          setErrorMessage("Failed to update tag");
+        }
       }
-    } else if (editMode === "edit" && editingTag) {
-      const success = await updateTag(editingTag.id, tagName.trim(), tagColor);
-      if (success) {
-        setEditMode(null);
-        setEditingTag(null);
-      }
+    } catch (error) {
+      console.error("[TagsManagement] Error saving tag:", error);
+      setErrorMessage("An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Handler für das Löschen eines Tags
+  // Enhanced handler for deleting tag with confirmation and error handling
   const handleDeleteTag = async (tagId: string) => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete this tag? It will be removed from all documents."
-      )
-    ) {
-      await deleteTag(tagId);
+    const tagName =
+      availableTags.find((t) => t.id === tagId)?.name || "this tag";
+    const usageCount = getTagUsageCount(tagId);
+
+    const confirmMessage =
+      usageCount > 0
+        ? `Are you sure you want to delete "${tagName}"? It will be removed from ${usageCount} document${
+            usageCount !== 1 ? "s" : ""
+          }.`
+        : `Are you sure you want to delete "${tagName}"?`;
+
+    if (window.confirm(confirmMessage)) {
+      setIsLoading(true);
+      try {
+        console.log(
+          `[TagsManagement] Deleting tag "${tagName}" (ID: ${tagId})`
+        );
+        const success = await deleteTag(tagId);
+        if (!success) {
+          setErrorMessage(`Failed to delete tag "${tagName}"`);
+        } else {
+          console.log(`[TagsManagement] Successfully deleted tag "${tagName}"`);
+
+          // Trigger sync to update other contexts
+          setTimeout(() => {
+            triggerTagSync();
+          }, 500);
+        }
+
+        // Force reload tags to ensure UI is up to date
+        await loadTags();
+
+        // Force refresh the component
+        setRefreshKey((prev) => prev + 1);
+      } catch (error) {
+        console.error("[TagsManagement] Error deleting tag:", error);
+        setErrorMessage(
+          `An error occurred deleting "${tagName}". Please try again.`
+        );
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  // Verfügbare Farben für Tags
+  // Available colors for tags
   const colorOptions: ColorOption[] = [
     { id: "blue", value: "#4285F4" },
     { id: "green", value: "#0F9D58" },
@@ -115,89 +280,115 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
     { id: "pink", value: "#E91E63" },
   ];
 
-  // Sortiere Tags alphabetisch
-  const sortedTags = [...availableTags].sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
+  // Sort tags alphabetically and ensure unique display by ID
+  // This is important - in case we still have duplicates, only show one of each
+  const sortedTags = React.useMemo(() => {
+    // Create a map to deduplicate by name, keeping only the first occurrence
+    const uniqueTagsByName = new Map<string, TagType>();
 
-  // Rendere den Tag-Editor
-  const renderTagEditor = () => {
-    return (
-      <TagEditorContainer
-        as={motion.div}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        transition={{ duration: 0.3 }}
-      >
-        <TagEditorHeader>
-          {editMode === "create"
-            ? "Create New Tag"
-            : `Edit "${editingTag?.name}"`}
-        </TagEditorHeader>
+    availableTags.forEach((tag) => {
+      const lowerName = tag.name.toLowerCase().trim();
+      if (!uniqueTagsByName.has(lowerName)) {
+        uniqueTagsByName.set(lowerName, tag);
+      }
+    });
 
-        <TagEditorForm>
-          <FormGroup>
-            {/* Standardisierte TextField-Komponente */}
-            <TextField
-              label="Tag Name"
-              value={tagName}
-              onChange={(e) => setTagName(e.target.value)}
-              placeholder="Enter tag name"
-              autoFocus
-              fullWidth
-            />
-          </FormGroup>
-
-          <FormGroup>
-            {/* Standardisierte ColorPicker-Komponente */}
-            <ColorPicker
-              label="Tag Color"
-              colors={colorOptions}
-              value={tagColor}
-              onChange={setTagColor}
-              size="medium"
-              fullWidth
-            />
-          </FormGroup>
-
-          {/* Beispiel für eine Tag-Vorschau mit der gemeinsamen Komponente */}
-          <FormGroup>
-            <FormLabel>Preview</FormLabel>
-            <PreviewContainer>
-              <Tag color={tagColor} isActive={true}>
-                {tagName || "Tag Name"}
-              </Tag>
-            </PreviewContainer>
-          </FormGroup>
-
-          {editMode === "edit" && editingTag && (
-            <UsageStats>
-              Used in {getTagUsageCount(editingTag.id)} documents
-            </UsageStats>
-          )}
-
-          <TagEditorActions>
-            {/* Standardisierte Button-Komponenten */}
-            <Button variant="text" onClick={handleCancelEdit}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSaveTag}
-              disabled={!tagName.trim()}
-            >
-              Save
-            </Button>
-          </TagEditorActions>
-        </TagEditorForm>
-      </TagEditorContainer>
+    // Convert back to array and sort
+    return Array.from(uniqueTagsByName.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
     );
-  };
+  }, [availableTags, refreshKey]); // refreshKey ensures re-computation
+
+  // Log tags for debugging
+  useEffect(() => {
+    console.log(
+      `[TagsManagement] Rendering with ${sortedTags.length} unique tags, refresh key: ${refreshKey}`
+    );
+  }, [sortedTags, refreshKey]);
+
+  // Tag editor content component
+  const TagEditorContent = () => (
+    <TagEditorContainer>
+      <TagEditorHeader>
+        {editMode === "create"
+          ? "Create New Tag"
+          : `Edit "${editingTag?.name}"`}
+      </TagEditorHeader>
+
+      <TagEditorForm>
+        <FormGroup>
+          <TextField
+            label="Tag Name"
+            value={tagName}
+            onChange={(e) => setTagName(e.target.value)}
+            placeholder="Enter tag name"
+            autoFocus
+            fullWidth
+            error={
+              errorMessage && errorMessage.includes("name")
+                ? errorMessage
+                : undefined
+            }
+          />
+        </FormGroup>
+
+        <FormGroup>
+          <ColorPicker
+            label="Tag Color"
+            colors={colorOptions}
+            value={tagColor}
+            onChange={(color) => {
+              console.log(`[TagsManagement] Color selected: ${color}`);
+              setTagColor(color);
+            }}
+            size="medium"
+            fullWidth
+          />
+        </FormGroup>
+
+        <FormGroup>
+          <FormLabel>Preview</FormLabel>
+          <PreviewContainer>
+            <Tag color={tagColor} isActive={true}>
+              {tagName || "Tag Name"}
+            </Tag>
+          </PreviewContainer>
+        </FormGroup>
+
+        {editMode === "edit" && editingTag && (
+          <UsageStats>
+            Used in {getTagUsageCount(editingTag.id)} documents
+          </UsageStats>
+        )}
+
+        {errorMessage && !errorMessage.includes("name") && (
+          <ErrorMessage>{errorMessage}</ErrorMessage>
+        )}
+
+        <TagEditorActions>
+          <Button
+            variant="text"
+            onClick={handleCancelEdit}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSaveTag}
+            disabled={isLoading || !tagName.trim()}
+          >
+            {isLoading ? "Saving..." : "Save"}
+          </Button>
+        </TagEditorActions>
+      </TagEditorForm>
+
+      {isLoading && <LoadingOverlay />}
+    </TagEditorContainer>
+  );
 
   return (
     <Container>
-      {/* Standardisierter HeaderContainer mit Lucide Icon */}
       <HeaderContainer
         leftContent={
           <BackButton
@@ -212,6 +403,7 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
             variant="primary"
             onClick={handleCreateTag}
             startIcon={<Icon name="Plus" size="small" />}
+            disabled={isLoading || globalLoading}
           >
             Add New Tag
           </Button>
@@ -220,69 +412,88 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
         <Title>My Tags</Title>
       </HeaderContainer>
 
-      <AnimatePresence mode="wait">
-        {editMode ? (
-          renderTagEditor()
+      <ContentContainer>
+        {globalLoading ? (
+          <Loading>
+            <Spinner size="large" showLabel labelText="Loading tags..." />
+          </Loading>
         ) : (
-          <ContentContainer>
-            {isLoading ? (
-              <Loading>
-                <Spinner size="large" showLabel labelText="Loading tags..." />
-              </Loading>
+          <>
+            {/* Use FadeTransition for empty state */}
+            {sortedTags.length === 0 ? (
+              <FadeTransition transitionKey="empty-tags" duration={0.3}>
+                <EmptyCollection
+                  collectionType="tags"
+                  actionText="Create First Tag"
+                  onAction={handleCreateTag}
+                  size="large"
+                  icon={<Icon name="Tags" size="large" />}
+                  description="Create tags to help organize your documents. Tags make it easier to categorize and find your documents later. You can add tags during upload or when editing documents."
+                />
+              </FadeTransition>
             ) : (
-              <>
-                {sortedTags.length === 0 ? (
-                  <EmptyCollection
-                    collectionType="tags"
-                    actionText="Create First Tag"
-                    onAction={handleCreateTag}
-                    size="large"
-                    icon={<Icon name="Tags" size="large" />}
-                    description="Create tags to help organize your documents. Tags can be added to documents during upload or search."
-                  />
-                ) : (
-                  <TagsGrid>
-                    {sortedTags.map((tag) => (
-                      <TagCard
-                        key={tag.id}
-                        as={motion.div}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        layout
-                      >
-                        <TagCardColor color={tag.color} />
-                        <TagCardContent>
-                          <TagCardName>{tag.name}</TagCardName>
-                          <TagCardCount>
-                            {getTagUsageCount(tag.id)} document
-                            {getTagUsageCount(tag.id) !== 1 ? "s" : ""}
-                          </TagCardCount>
-                        </TagCardContent>
-                        <TagCardActions>
-                          {/* Standardisierte IconButton-Komponenten mit Lucide Icons */}
-                          <IconButton
-                            variant="text"
-                            onClick={() => handleEditTag(tag)}
-                            title="Edit Tag"
-                            icon={<Icon name="Pencil" size="small" />}
-                          />
-                          <IconButton
-                            variant="text"
-                            onClick={() => handleDeleteTag(tag.id)}
-                            title="Delete Tag"
-                            icon={<Icon name="Trash2" size="small" />}
-                          />
-                        </TagCardActions>
-                      </TagCard>
-                    ))}
-                  </TagsGrid>
-                )}
-              </>
+              <TagsGrid>
+                {sortedTags.map((tag) => (
+                  <TagCard
+                    key={tag.id}
+                    as={motion.div}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    layout
+                  >
+                    <TagCardColor color={tag.color} />
+                    <TagCardContent>
+                      <TagCardName>{tag.name}</TagCardName>
+                      <TagCardCount>
+                        {getTagUsageCount(tag.id)} document
+                        {getTagUsageCount(tag.id) !== 1 ? "s" : ""}
+                      </TagCardCount>
+                    </TagCardContent>
+                    <TagCardActions>
+                      <IconButton
+                        iconName="Pencil"
+                        onClick={() => handleEditTag(tag)}
+                        title="Edit Tag"
+                        variant="text"
+                        disabled={isLoading}
+                      />
+                      <IconButton
+                        iconName="Trash2"
+                        onClick={() => handleDeleteTag(tag.id)}
+                        title="Delete Tag"
+                        variant="text"
+                        disabled={isLoading}
+                      />
+                    </TagCardActions>
+                  </TagCard>
+                ))}
+              </TagsGrid>
             )}
-          </ContentContainer>
+          </>
         )}
-      </AnimatePresence>
+      </ContentContainer>
+
+      {/* Use ModalTransition for the tag editor instead of AnimatePresence */}
+      <ModalTransition
+        isOpen={editMode !== null}
+        onClose={isLoading ? undefined : handleCancelEdit}
+        maxWidth="600px"
+      >
+        <TagEditorContent />
+      </ModalTransition>
+
+      {isLoading && !globalLoading && (
+        <LoadingOverlay
+          message={
+            editMode === "create"
+              ? "Creating tag..."
+              : editMode === "edit"
+              ? "Updating tag..."
+              : "Processing..."
+          }
+        />
+      )}
     </Container>
   );
 };
@@ -358,12 +569,10 @@ const TagCardActions = styled.div`
   border-left: 1px solid ${(props) => props.theme.colors.divider};
 `;
 
+// Tag Editor Styles - Now used directly inside the modal
 const TagEditorContainer = styled.div`
-  background-color: ${(props) => props.theme.colors.surface};
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  padding: ${(props) => props.theme.spacing.lg};
-  max-width: 600px;
-  margin: 0 auto;
+  width: 100%;
+  position: relative;
 `;
 
 const TagEditorHeader = styled.h3`
@@ -393,7 +602,6 @@ const FormLabel = styled.label`
   color: ${(props) => props.theme.colors.text.primary};
 `;
 
-// Neuer Styled Component für die Vorschau
 const PreviewContainer = styled.div`
   display: flex;
   align-items: center;
@@ -405,6 +613,15 @@ const PreviewContainer = styled.div`
 const UsageStats = styled.div`
   font-size: ${(props) => props.theme.typography.fontSize.sm};
   color: ${(props) => props.theme.colors.text.secondary};
+`;
+
+const ErrorMessage = styled.div`
+  color: ${(props) => props.theme.colors.error};
+  font-size: ${(props) => props.theme.typography.fontSize.sm};
+  margin-top: ${(props) => props.theme.spacing.sm};
+  padding: ${(props) => props.theme.spacing.sm};
+  background-color: ${(props) => props.theme.colors.error}20;
+  border-radius: ${(props) => props.theme.borderRadius.sm};
 `;
 
 const TagEditorActions = styled.div`

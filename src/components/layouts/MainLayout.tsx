@@ -3,6 +3,8 @@ import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigation } from "../../context/NavigationContext";
 import { useUpload } from "../../context/UploadContext";
+// Import TagSynchronizer component
+import TagSynchronizer from "../shared/tags/TagSynchronizer";
 
 // Import der Sektionskomponenten
 import UploadSectionWrapper from "../upload/UploadSection";
@@ -222,6 +224,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <LayoutContainer>
+      {/* Add TagSynchronizer component here */}
+      <TagSynchronizer />
+
       {/* Hauptsektionen */}
       <Section
         isActive={activeSection === "upload"}

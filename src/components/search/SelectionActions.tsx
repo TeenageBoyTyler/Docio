@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSearch } from "../../context/SearchContext";
 // Importieren der standardisierten Komponenten
 import { Button } from "../shared/buttons";
 import { EmptySelection } from "../shared/empty";
 import { BackButton, BackButtonContainer } from "../shared/navigation";
 import Icon from "../shared/icons/Icon";
+import { FadeTransition, SlideTransition } from "../shared/transitions";
 
 const SelectionActions: React.FC = () => {
   const { selectedDocuments, goToPreviousStep, goToStep } = useSearch();
@@ -63,89 +64,198 @@ const SelectionActions: React.FC = () => {
       </BackButtonContainer>
 
       {/* Thumbnails der ausgewählten Dokumente */}
-      <ThumbnailStrip>
-        {selectedDocuments.map((doc) => (
-          <Thumbnail key={doc.id}>
-            {doc.preview ? (
-              <ThumbnailImage src={doc.preview} alt={doc.name} />
-            ) : (
-              <PlaceholderThumbnail>
-                <Icon name="File" size="large" color="currentColor" />
-              </PlaceholderThumbnail>
-            )}
-            <ThumbnailName>{doc.name}</ThumbnailName>
-          </Thumbnail>
-        ))}
-      </ThumbnailStrip>
+      <FadeTransition isVisible={true} duration={0.3} delay={0.1}>
+        <ThumbnailStrip
+          as={motion.div}
+          initial={{ opacity: 0.9, y: 10 }}
+          animate={{
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.4 },
+          }}
+        >
+          <AnimatePresence>
+            {selectedDocuments.map((doc, index) => (
+              <Thumbnail
+                key={doc.id}
+                as={motion.div}
+                initial={{ opacity: 0, scale: 0.9, x: -10 }}
+                animate={{
+                  opacity: 1,
+                  scale: 1,
+                  x: 0,
+                  transition: {
+                    delay: index * 0.05,
+                    duration: 0.3,
+                    ease: "easeOut",
+                  },
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  y: -5,
+                  boxShadow: "0 5px 10px rgba(0, 0, 0, 0.1)",
+                  transition: { duration: 0.2 },
+                }}
+              >
+                {doc.preview ? (
+                  <ThumbnailImage src={doc.preview} alt={doc.name} />
+                ) : (
+                  <PlaceholderThumbnail>
+                    <Icon name="File" size="large" color="currentColor" />
+                  </PlaceholderThumbnail>
+                )}
+                <ThumbnailName>{doc.name}</ThumbnailName>
+              </Thumbnail>
+            ))}
+          </AnimatePresence>
+        </ThumbnailStrip>
+      </FadeTransition>
 
       {/* PDF-Optionen */}
-      <OptionsSection>
-        <OptionTitle>PDF-Optionen</OptionTitle>
-        <OrientationOptions>
-          <OrientationOption
-            isSelected={orientation === "portrait"}
-            onClick={() => setOrientation("portrait")}
-          >
-            <OrientationIcon>
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
+      <SlideTransition
+        direction="right"
+        isVisible={true}
+        duration={0.4}
+        delay={0.2}
+        distance={30}
+      >
+        <OptionsSection>
+          <OptionTitle>PDF-Optionen</OptionTitle>
+          <OrientationOptions>
+            <OrientationOption
+              isSelected={orientation === "portrait"}
+              onClick={() => setOrientation("portrait")}
+              as={motion.button}
+              whileHover={{
+                scale: orientation === "portrait" ? 1.02 : 1.05,
+                boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+              }}
+              whileTap={{ scale: 0.98 }}
+              animate={{
+                scale: orientation === "portrait" ? [1, 1.05, 1] : 1,
+                transition: { duration: 0.3 },
+              }}
+            >
+              <OrientationIcon
+                as={motion.div}
+                animate={{
+                  rotate: orientation === "portrait" ? [0, -5, 5, 0] : 0,
+                  transition: { duration: 0.5, delay: 0.2 },
+                }}
               >
-                <rect
-                  x="6"
-                  y="3"
-                  width="12"
-                  height="18"
-                  rx="1"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-              </svg>
-            </OrientationIcon>
-            <OrientationLabel>Hochformat</OrientationLabel>
-          </OrientationOption>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect
+                    x="6"
+                    y="3"
+                    width="12"
+                    height="18"
+                    rx="1"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </OrientationIcon>
+              <OrientationLabel>Hochformat</OrientationLabel>
+            </OrientationOption>
 
-          <OrientationOption
-            isSelected={orientation === "landscape"}
-            onClick={() => setOrientation("landscape")}
-          >
-            <OrientationIcon>
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
+            <OrientationOption
+              isSelected={orientation === "landscape"}
+              onClick={() => setOrientation("landscape")}
+              as={motion.button}
+              whileHover={{
+                scale: orientation === "landscape" ? 1.02 : 1.05,
+                boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+              }}
+              whileTap={{ scale: 0.98 }}
+              animate={{
+                scale: orientation === "landscape" ? [1, 1.05, 1] : 1,
+                transition: { duration: 0.3 },
+              }}
+            >
+              <OrientationIcon
+                as={motion.div}
+                animate={{
+                  rotate: orientation === "landscape" ? [0, -5, 5, 0] : 0,
+                  transition: { duration: 0.5, delay: 0.2 },
+                }}
               >
-                <rect
-                  x="3"
-                  y="6"
-                  width="18"
-                  height="12"
-                  rx="1"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-              </svg>
-            </OrientationIcon>
-            <OrientationLabel>Querformat</OrientationLabel>
-          </OrientationOption>
-        </OrientationOptions>
-      </OptionsSection>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect
+                    x="3"
+                    y="6"
+                    width="18"
+                    height="12"
+                    rx="1"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </OrientationIcon>
+              <OrientationLabel>Querformat</OrientationLabel>
+            </OrientationOption>
+          </OrientationOptions>
+        </OptionsSection>
+      </SlideTransition>
 
       {/* Aktions-Buttons */}
-      <ActionsContainer>
-        <Button variant="text" onClick={handleAddMore}>
-          Mehr hinzufügen
-        </Button>
+      <SlideTransition
+        direction="up"
+        isVisible={true}
+        duration={0.4}
+        delay={0.3}
+        distance={20}
+      >
+        <ActionsContainer
+          as={motion.div}
+          initial={{ opacity: 0.8 }}
+          animate={{
+            opacity: 1,
+            transition: { duration: 0.5 },
+          }}
+        >
+          <motion.div whileHover={{ x: -5 }} whileTap={{ scale: 0.97 }}>
+            <Button variant="text" onClick={handleAddMore}>
+              Mehr hinzufügen
+            </Button>
+          </motion.div>
 
-        <Button variant="primary" onClick={handleCreatePdf}>
-          PDF erstellen
-        </Button>
-      </ActionsContainer>
+          <motion.div
+            whileHover={{
+              scale: 1.05,
+              transition: { duration: 0.2 },
+            }}
+            whileTap={{ scale: 0.95 }}
+            animate={{
+              boxShadow: [
+                "0px 0px 0px rgba(0,0,0,0)",
+                "0px 4px 8px rgba(0,0,0,0.1)",
+                "0px 0px 0px rgba(0,0,0,0)",
+              ],
+              transition: {
+                duration: 2,
+                repeat: 0,
+                repeatDelay: 3,
+              },
+            }}
+          >
+            <Button variant="primary" onClick={handleCreatePdf}>
+              PDF erstellen
+            </Button>
+          </motion.div>
+        </ActionsContainer>
+      </SlideTransition>
     </Container>
   );
 };

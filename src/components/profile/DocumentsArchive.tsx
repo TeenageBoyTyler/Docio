@@ -63,6 +63,35 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     to: null,
   });
 
+  // Local loading state for tag filter operations
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
+
+  // Ensure tags are loaded first, then documents, and handle tag deduplication
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+
+        // First load tags to ensure they're available for document filtering
+        await loadTags();
+
+        // Ensure we don't have duplicate tags (fixes UI issues with tag display)
+        // ProfileContext has a deduplicateTags method but we don't expose it here
+        // The TagSynchronizer will handle deduplication during its initial run
+
+        // Then load documents that might reference those tags
+        await loadDocuments();
+      } catch (error) {
+        console.error("Error loading initial data in DocumentsArchive:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Group documents by date
   useEffect(() => {
     const today = new Date();
@@ -147,18 +176,26 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     }
   };
 
-  // Handler für Tag-Filter - aktualisiert für Mehrfachauswahl
+  // Enhanced tag filter handler
   const handleTagFilter = (tagId: string) => {
+    setIsFilterLoading(true);
+
+    // Update tag filters
     setActiveTagFilters((prevFilters) => {
-      // Prüfen ob der Tag bereits ausgewählt ist
+      // Check if the tag is already selected
       if (prevFilters.includes(tagId)) {
-        // Wenn ja, entfernen wir ihn
+        // If yes, remove it
         return prevFilters.filter((id) => id !== tagId);
       } else {
-        // Wenn nicht, fügen wir ihn hinzu
+        // If not, add it
         return [...prevFilters, tagId];
       }
     });
+
+    // Force documents reload to ensure filtering works with latest data
+    setTimeout(() => {
+      loadDocuments().finally(() => setIsFilterLoading(false));
+    }, 100);
   };
 
   // Handler for deleting selected documents
@@ -179,17 +216,6 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     // Navigation zum Upload-Bereich mithilfe des NavigationContext
     navigateTo("upload");
   };
-
-  // Fetch documents AND tags on mount only once
-  useEffect(() => {
-    const loadData = async () => {
-      await loadDocuments();
-      await loadTags(); // Wichtig: Tags auch laden, damit sie in den Dokumenten angezeigt werden können
-    };
-
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Find tag name by ID
   const getTagName = (tagId: string) => {
@@ -359,13 +385,31 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
     });
   };
 
+  // Deduplicate tags by name for display to avoid duplicate filter buttons
+  const displayTags = React.useMemo(() => {
+    // Create a Map to deduplicate by name, keeping only the first occurrence
+    const uniqueTagsByName = new Map<string, TagType>();
+
+    availableTags.forEach((tag) => {
+      const lowerName = tag.name.toLowerCase().trim();
+      if (!uniqueTagsByName.has(lowerName)) {
+        uniqueTagsByName.set(lowerName, tag);
+      }
+    });
+
+    // Convert back to array and sort
+    return Array.from(uniqueTagsByName.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [availableTags]);
+
   // Render available tags as filter options - aktualisiert um die Tag-Komponente zu verwenden
   const renderTagFilters = () => {
     return (
       <TagFilterContainer>
         <TagFilterTitle>Filter by Tag</TagFilterTitle>
         <TagFilterList>
-          {availableTags.map((tag) => (
+          {displayTags.map((tag) => (
             <Tag
               key={tag.id}
               color={tag.color}
@@ -378,7 +422,14 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
         </TagFilterList>
         {activeTagFilters.length > 0 && (
           <ClearFiltersButton
-            onClick={() => setActiveTagFilters([])}
+            onClick={() => {
+              setActiveTagFilters([]);
+              // Force reload documents
+              setIsFilterLoading(true);
+              setTimeout(() => {
+                loadDocuments().finally(() => setIsFilterLoading(false));
+              }, 100);
+            }}
             as={motion.button}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -407,7 +458,7 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
 
       {renderTagFilters()}
 
-      {isLoading ? (
+      {isLoading || isFilterLoading ? (
         <Loading>
           <Spinner size="large" showLabel labelText="Loading documents..." />
         </Loading>

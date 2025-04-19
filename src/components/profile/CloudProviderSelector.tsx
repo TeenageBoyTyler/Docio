@@ -3,6 +3,9 @@ import React from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useProfile, CloudProvider } from "../../context/ProfileContext";
+// Import the Icon component
+import { Icon } from "../shared/icons";
+import { HeaderContainer, Title } from "../shared/navigation";
 
 interface CloudProviderSelectorProps {
   onClose: () => void;
@@ -49,23 +52,8 @@ const CloudProviderSelector: React.FC<CloudProviderSelectorProps> = ({
           onClick={() => handleProviderSelect("dropbox")}
         >
           <ProviderIcon>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m21 16-5-5 5-5"></path>
-              <path d="m3 16 5-5-5-5"></path>
-              <path d="M12 21v-7"></path>
-              <path d="M7 4h10"></path>
-              <path d="M7 12h10"></path>
-            </svg>
+            {/* Replace SVG with Icon component */}
+            <Icon name="FileText" size="medium" />
           </ProviderIcon>
           <ProviderName>Dropbox</ProviderName>
           {cloudProvider === "dropbox" && (
@@ -78,21 +66,8 @@ const CloudProviderSelector: React.FC<CloudProviderSelectorProps> = ({
           onClick={() => handleProviderSelect("mock")}
         >
           <ProviderIcon>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-              <line x1="8" y1="21" x2="16" y2="21"></line>
-              <line x1="12" y1="17" x2="12" y2="21"></line>
-            </svg>
+            {/* Replace SVG with Icon component */}
+            <Icon name="Monitor" size="medium" />
           </ProviderIcon>
           <ProviderName>Mock Provider (For Testing)</ProviderName>
           {cloudProvider === "mock" && (
@@ -132,13 +107,6 @@ const Header = styled.div`
   padding: ${(props) => props.theme.spacing.md}
     ${(props) => props.theme.spacing.lg};
   border-bottom: 1px solid ${(props) => props.theme.colors.divider};
-`;
-
-const Title = styled.h3`
-  font-size: ${(props) => props.theme.typography.fontSize.lg};
-  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
-  color: ${(props) => props.theme.colors.text.primary};
-  margin: 0;
 `;
 
 const CloseButton = styled.button`

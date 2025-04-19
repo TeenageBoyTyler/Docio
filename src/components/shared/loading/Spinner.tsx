@@ -67,30 +67,30 @@ const spinnerVariants = {
 };
 
 // Styled Components
-const SpinnerContainer = styled.div<{ showLabel: boolean }>`
+const SpinnerContainer = styled.div<{ $showLabel: boolean }>`
   display: flex;
-  flex-direction: ${(props) => (props.showLabel ? "column" : "row")};
+  flex-direction: ${(props) => (props.$showLabel ? "column" : "row")};
   align-items: center;
   justify-content: center;
   gap: 8px;
 `;
 
 const SpinnerCircle = styled(motion.div)<{
-  size: SpinnerSize;
-  spinnerColor: string;
+  $size: SpinnerSize;
+  $spinnerColor: string;
 }>`
-  width: ${(props) => sizeConfig[props.size].diameter};
-  height: ${(props) => sizeConfig[props.size].diameter};
+  width: ${(props) => sizeConfig[props.$size].diameter};
+  height: ${(props) => sizeConfig[props.$size].diameter};
   border-radius: 50%;
-  border: ${(props) => sizeConfig[props.size].thickness} solid
+  border: ${(props) => sizeConfig[props.$size].thickness} solid
     ${(props) => props.theme.colors.surface};
   border-top-color: ${(props) =>
-    props.spinnerColor || props.theme.colors.primary};
+    props.$spinnerColor || props.theme.colors.primary};
   box-sizing: border-box;
 `;
 
-const SpinnerLabel = styled.div<{ size: SpinnerSize }>`
-  font-size: ${(props) => sizeConfig[props.size].labelSize};
+const SpinnerLabel = styled.div<{ $size: SpinnerSize }>`
+  font-size: ${(props) => sizeConfig[props.$size].labelSize};
   color: ${(props) => props.theme.colors.text.secondary};
   margin-top: 4px;
 `;
@@ -119,14 +119,14 @@ export const Spinner: React.FC<SpinnerProps> = ({
   const spinnerColor = color || "";
 
   return (
-    <SpinnerContainer showLabel={showLabel} className={className}>
+    <SpinnerContainer $showLabel={showLabel} className={className}>
       <SpinnerCircle
-        size={size}
-        spinnerColor={spinnerColor}
+        $size={size}
+        $spinnerColor={spinnerColor}
         variants={spinnerVariants}
         animate="rotate"
       />
-      {showLabel && <SpinnerLabel size={size}>{labelText}</SpinnerLabel>}
+      {showLabel && <SpinnerLabel $size={size}>{labelText}</SpinnerLabel>}
     </SpinnerContainer>
   );
 };

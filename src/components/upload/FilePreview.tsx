@@ -1,6 +1,6 @@
 import React from "react";
 import styled from "styled-components";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { useUpload } from "../../context/UploadContext";
 // Standardized imports from index files
 import { Button, IconButton } from "../shared/buttons";
@@ -36,9 +36,100 @@ const FilePreview: React.FC<FilePreviewProps> = ({ onAddMore }) => {
     clearFiles();
   };
 
+  // Animation variants for staggered animation of grid items
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        when: "beforeChildren",
+        staggerChildren: 0.08, // Stagger delay between items
+        delayChildren: 0.1, // Initial delay before starting children animations
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: {
+        when: "afterChildren",
+        staggerChildren: 0.05,
+        staggerDirection: -1, // Reverse stagger on exit
+      },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring",
+        damping: 15,
+        stiffness: 300,
+      },
+    },
+    exit: {
+      opacity: 0,
+      y: 10,
+      scale: 0.97,
+      transition: {
+        duration: 0.2,
+      },
+    },
+  };
+
+  // Animation variants for header
+  const headerVariants: Variants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: 0.05,
+        duration: 0.4,
+        ease: "easeOut",
+      },
+    },
+    exit: {
+      opacity: 0,
+      y: -10,
+      transition: {
+        duration: 0.2,
+      },
+    },
+  };
+
+  // Animation variants for buttons
+  const buttonGroupVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: 0.2 + files.length * 0.08, // Delay until after grid items
+        duration: 0.4,
+        ease: "easeOut",
+      },
+    },
+    exit: {
+      opacity: 0,
+      y: 10,
+      transition: {
+        duration: 0.2,
+      },
+    },
+  };
+
   return (
     <Container>
-      <Header>
+      <Header
+        as={motion.div}
+        variants={headerVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         {/* No back button as requested */}
         <TitleContainer>
           <Title>Preview & Confirm</Title>
@@ -48,9 +139,21 @@ const FilePreview: React.FC<FilePreviewProps> = ({ onAddMore }) => {
         </TitleContainer>
       </Header>
 
-      <GridContainer>
+      <GridContainer
+        as={motion.div}
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         {files.map((file) => (
-          <GridItem key={file.id} as={motion.div} layout>
+          <GridItem
+            key={file.id}
+            as={motion.div}
+            layout
+            variants={itemVariants}
+            whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
+          >
             <PreviewImage src={file.preview} alt={file.name} />
             <FileName>{file.name}</FileName>
             <RemoveButton
@@ -64,7 +167,13 @@ const FilePreview: React.FC<FilePreviewProps> = ({ onAddMore }) => {
         ))}
       </GridContainer>
 
-      <ButtonGroup>
+      <ButtonGroup
+        as={motion.div}
+        variants={buttonGroupVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <CancelButton variant="text" onClick={handleCancelUpload}>
           Cancel Upload
         </CancelButton>
@@ -134,6 +243,12 @@ const GridItem = styled.div`
   aspect-ratio: 1;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
 `;
 
 const PreviewImage = styled.img`
