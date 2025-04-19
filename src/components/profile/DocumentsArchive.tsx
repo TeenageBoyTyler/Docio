@@ -13,8 +13,8 @@ import { useNavigation } from "../../context/NavigationContext";
 import { EmptyCollection } from "../shared/empty";
 // Importieren der standardisierten Loading-Komponenten
 import { Spinner } from "../shared/loading";
-// Importieren der standardisierten BackButton-Komponente
-import BackButton from "../shared/navigation/BackButton";
+// Importieren der standardisierten Navigation-Komponenten
+import { BackButton, HeaderContainer, Title } from "../shared/navigation";
 // Importieren der standardisierten Tag-Komponente
 import Tag from "../shared/tags/Tag";
 
@@ -392,16 +392,18 @@ const DocumentsArchive: React.FC<DocumentsArchiveProps> = ({ onNavigate }) => {
 
   return (
     <Container>
-      <Header>
-        {/* Standardisierte BackButton-Komponente */}
-        <BackButton
-          onClick={() => onNavigate("home")}
-          label="Back to Profile"
-          showLabel={true}
-          variant="text"
-        />
+      <HeaderContainer
+        leftContent={
+          <BackButton
+            onClick={() => onNavigate("home")}
+            label="Back to Profile"
+            showLabel={true}
+            variant="text"
+          />
+        }
+      >
         <Title>My Documents</Title>
-      </Header>
+      </HeaderContainer>
 
       {renderTagFilters()}
 
@@ -438,18 +440,7 @@ const Container = styled.div`
   position: relative;
 `;
 
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  margin-bottom: ${(props) => props.theme.spacing.lg};
-`;
-
-const Title = styled.h2`
-  font-size: ${(props) => props.theme.typography.fontSize.xl};
-  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
-  color: ${(props) => props.theme.colors.text.primary};
-  margin-left: ${(props) => props.theme.spacing.md};
-`;
+// Removed redundant Header and Title styled components
 
 const TagFilterContainer = styled.div`
   margin-bottom: ${(props) => props.theme.spacing.lg};

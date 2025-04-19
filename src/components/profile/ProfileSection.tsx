@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { useProfile, ProfileView } from "../../context/ProfileContext";
+import { useNavigation } from "../../context/NavigationContext";
 
 // Unterkomponenten importieren
 import ProfileHome from "./ProfileHome";
@@ -10,6 +11,8 @@ import DocumentsArchive from "./DocumentsArchive";
 import TagsManagement from "./TagsManagement";
 import ProcessingSettings from "./ProcessingSettings";
 import CloudProviderSelector from "./CloudProviderSelector";
+// Import the Icon component
+import { Icon } from "../shared/icons";
 
 const ProfileSection: React.FC = () => {
   const {
@@ -22,8 +25,18 @@ const ProfileSection: React.FC = () => {
     connectToCloud,
   } = useProfile();
 
+  // Get navigation context for cross-section navigation
+  const { navigateToProfileView, currentProfileView } = useNavigation();
+
   // State für den Cloud-Provider-Selector
   const [showProviderSelector, setShowProviderSelector] = useState(false);
+
+  // Synchronisiere Profile-View mit NavigationContext
+  useEffect(() => {
+    if (currentView !== currentProfileView) {
+      navigateToProfileView(currentView);
+    }
+  }, [currentView, currentProfileView, navigateToProfileView]);
 
   // Animation-Varianten für die Seitenübergänge
   const pageVariants = {
@@ -53,18 +66,8 @@ const ProfileSection: React.FC = () => {
       <Container>
         <EmptyStateContainer>
           <EmptyStateIcon>
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04ZM19 18H6C3.79 18 2 16.21 2 14C2 11.95 3.53 10.24 5.56 10.03L6.63 9.92L7.13 8.97C8.08 7.14 9.94 6 12 6C14.62 6 16.88 7.86 17.39 10.43L17.69 11.93L19.22 12.04C20.78 12.14 22 13.45 22 15C22 16.65 20.65 18 19 18Z"
-                fill="currentColor"
-              />
-            </svg>
+            {/* Replace SVG with Icon component */}
+            <Icon name="Cloud" size="large" />
           </EmptyStateIcon>
           <EmptyStateTitle>Connect to Cloud Storage</EmptyStateTitle>
           <EmptyStateText>
@@ -116,29 +119,8 @@ const ProfileSection: React.FC = () => {
             <ProfileActionBar>
               <ProviderButton onClick={() => setShowProviderSelector(true)}>
                 <ProviderIcon>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 10c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"></path>
-                    <path d="M12 18c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"></path>
-                    <path d="M18 12c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path>
-                    <path d="M6 12c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path>
-                    <path d="M12 6c.3 0 .5-.1.7-.3.4-.4.4-1 0-1.4C12.5 4.1 12.3 4 12 4c-.3 0-.5.1-.7.3-.4.4-.4 1 0 1.4.2.2.4.3.7.3z"></path>
-                    <path d="M18 8c.3 0 .5-.1.7-.3.4-.4.4-1 0-1.4-.2-.2-.4-.3-.7-.3-.3 0-.5.1-.7.3-.4.4-.4 1 0 1.4.2.2.4.3.7.3z"></path>
-                    <path d="M18 16c-.3 0-.5.1-.7.3-.4.4-.4 1 0 1.4.2.2.4.3.7.3.3 0 .5-.1.7-.3.4-.4.4-1 0-1.4-.2-.2-.4-.3-.7-.3z"></path>
-                    <path d="M6 16c-.3 0-.5.1-.7.3-.4.4-.4 1 0 1.4.2.2.4.3.7.3.3 0 .5-.1.7-.3.4-.4.4-1 0-1.4-.2-.2-.4-.3-.7-.3z"></path>
-                    <path d="M12 18c-.3 0-.5.1-.7.3-.4.4-.4 1 0 1.4.2.2.4.3.7.3.3 0 .5-.1.7-.3.4-.4.4-1 0-1.4-.2-.2-.4-.3-.7-.3z"></path>
-                    <path d="M16.24 7.76l-4.47 4.47"></path>
-                    <path d="M7.76 16.24l4.47-4.47"></path>
-                  </svg>
+                  {/* Replace SVG with Icon component */}
+                  <Icon name="Network" size="small" />
                 </ProviderIcon>
                 Change Provider
               </ProviderButton>
@@ -291,6 +273,15 @@ const EmptyStateContainer = styled.div`
 const EmptyStateIcon = styled.div`
   color: ${(props) => props.theme.colors.text.secondary};
   margin-bottom: ${(props) => props.theme.spacing.lg};
+  /* Make the icon larger */
+  font-size: 64px;
+  line-height: 1;
+
+  /* Style specifically for the Icon component */
+  > div {
+    width: 64px;
+    height: 64px;
+  }
 `;
 
 const EmptyStateTitle = styled.h2`

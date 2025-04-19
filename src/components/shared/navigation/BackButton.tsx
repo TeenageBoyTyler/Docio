@@ -18,6 +18,12 @@ export interface BackButtonProps {
   showLabel?: boolean;
 
   /**
+   * Legacy-Prop: Wenn true, wird showLabel auf false gesetzt
+   * @deprecated Benutze stattdessen showLabel={false}
+   */
+  iconOnly?: boolean;
+
+  /**
    * Variante des Buttons
    * @default "text"
    */
@@ -47,12 +53,16 @@ export interface BackButtonProps {
 const BackButton: React.FC<BackButtonProps> = ({
   label = "Back",
   showLabel = false,
+  iconOnly = false, // Added support for legacy iconOnly prop
   size = "medium",
   variant = "text",
   onClick,
   className,
   ...rest
 }) => {
+  // If iconOnly is true, override showLabel to be false
+  const finalShowLabel = iconOnly ? false : showLabel;
+
   // SVG für das Pfeil-Icon
   const BackIcon = () => (
     <svg
@@ -70,7 +80,7 @@ const BackButton: React.FC<BackButtonProps> = ({
   );
 
   // Wenn nur der Button ohne Label angezeigt werden soll
-  if (!showLabel) {
+  if (!finalShowLabel) {
     return (
       <IconContainer
         className={className}
@@ -126,7 +136,7 @@ const BackButton: React.FC<BackButtonProps> = ({
       <IconWrapper $size={size}>
         <BackIcon />
       </IconWrapper>
-      {showLabel && <Label $size={size}>{label}</Label>}
+      {finalShowLabel && <Label $size={size}>{label}</Label>}
     </Container>
   );
 };

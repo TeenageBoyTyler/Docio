@@ -5,11 +5,11 @@ import { useSearch } from "../../context/SearchContext";
 // Importieren der standardisierten Komponenten
 import { Button } from "../shared/buttons";
 import { EmptySelection } from "../shared/empty";
-import BackButton from "../shared/navigation/BackButton";
+import { BackButton, BackButtonContainer } from "../shared/navigation";
+import Icon from "../shared/icons/Icon";
 
 const SelectionActions: React.FC = () => {
-  const { selectedDocuments, goToPreviousStep, goToNextStep, goToStep } =
-    useSearch();
+  const { selectedDocuments, goToPreviousStep, goToStep } = useSearch();
 
   const [orientation, setOrientation] = useState<"portrait" | "landscape">(
     "portrait"
@@ -22,15 +22,14 @@ const SelectionActions: React.FC = () => {
 
   // Handler für die PDF-Erstellung
   const handleCreatePdf = () => {
-    goToNextStep(); // Weiter zur PDF-Erstellung
+    goToStep("pdfCreation"); // Weiter zur PDF-Erstellung
   };
 
   // Wenn keine Dokumente ausgewählt sind, zeigen wir den EmptySelection-Zustand an
-  if (selectedDocuments.length === 0) {
+  if (!selectedDocuments || selectedDocuments.length === 0) {
     return (
       <Container>
-        <Header>
-          {/* Standardisierte BackButton-Komponente */}
+        <BackButtonContainer>
           <BackButton
             onClick={goToPreviousStep}
             label="Zurück zu Suchergebnissen"
@@ -38,7 +37,7 @@ const SelectionActions: React.FC = () => {
             variant="text"
           />
           <Title>Document Selection</Title>
-        </Header>
+        </BackButtonContainer>
 
         <EmptySelection
           itemType="documents"
@@ -53,8 +52,7 @@ const SelectionActions: React.FC = () => {
 
   return (
     <Container>
-      <Header>
-        {/* Standardisierte BackButton-Komponente */}
+      <BackButtonContainer>
         <BackButton
           onClick={goToPreviousStep}
           label="Zurück zu Suchergebnissen"
@@ -62,7 +60,7 @@ const SelectionActions: React.FC = () => {
           variant="text"
         />
         <Title>Ausgewählte Dokumente</Title>
-      </Header>
+      </BackButtonContainer>
 
       {/* Thumbnails der ausgewählten Dokumente */}
       <ThumbnailStrip>
@@ -72,18 +70,7 @@ const SelectionActions: React.FC = () => {
               <ThumbnailImage src={doc.preview} alt={doc.name} />
             ) : (
               <PlaceholderThumbnail>
-                <svg
-                  width="32"
-                  height="32"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M14 2H6C4.9 2 4.01 2.9 4.01 4L4 20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2ZM18 20H6V4H13V9H18V20Z"
-                    fill="currentColor"
-                  />
-                </svg>
+                <Icon name="File" size="large" color="currentColor" />
               </PlaceholderThumbnail>
             )}
             <ThumbnailName>{doc.name}</ThumbnailName>
@@ -170,12 +157,6 @@ const Container = styled.div`
   width: 100%;
   height: 100%;
   padding: ${(props) => props.theme.spacing.lg};
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
 const Title = styled.h2`

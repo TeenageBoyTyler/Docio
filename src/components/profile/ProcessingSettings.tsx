@@ -8,8 +8,10 @@ import {
 } from "../../context/ProfileContext";
 import { Button } from "../shared/buttons";
 import { RadioButton, PasswordField, Checkbox } from "../shared/inputs";
-// Import der standardisierten BackButton-Komponente
-import BackButton from "../shared/navigation/BackButton";
+// Import der standardisierten Navigation-Komponenten
+import { BackButton, HeaderContainer, Title } from "../shared/navigation";
+// Import der Icon-Komponente
+import { Icon } from "../shared/icons";
 
 interface ProcessingSettingsProps {
   onNavigate: (view: ProfileView) => void;
@@ -224,16 +226,19 @@ const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
 
   return (
     <Container>
-      <Header>
-        {/* Ersetzen des benutzerdefinierten Back-Buttons durch die standardisierte BackButton-Komponente */}
-        <BackButton
-          onClick={() => onNavigate("home")}
-          label="Back to Profile"
-          showLabel={true}
-          variant="text"
-        />
+      {/* Replace the old custom header with HeaderContainer */}
+      <HeaderContainer
+        leftContent={
+          <BackButton
+            onClick={() => onNavigate("home")}
+            label="Back to Profile"
+            showLabel={true}
+            variant="text"
+          />
+        }
+      >
         <Title>Processing Settings</Title>
-      </Header>
+      </HeaderContainer>
 
       <SettingsSection>
         <SectionTitle>Processing Method</SectionTitle>
@@ -252,28 +257,8 @@ const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
                 Client-side Processing
               </ProcessingOptionTitle>
               <ProcessingOptionIcon>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-                  <rect x="9" y="9" width="6" height="6"></rect>
-                  <line x1="9" y1="2" x2="9" y2="4"></line>
-                  <line x1="15" y1="2" x2="15" y2="4"></line>
-                  <line x1="9" y1="20" x2="9" y2="22"></line>
-                  <line x1="15" y1="20" x2="15" y2="22"></line>
-                  <line x1="20" y1="9" x2="22" y2="9"></line>
-                  <line x1="20" y1="14" x2="22" y2="14"></line>
-                  <line x1="2" y1="9" x2="4" y2="9"></line>
-                  <line x1="2" y1="14" x2="4" y2="14"></line>
-                </svg>
+                {/* Replace SVG with Icon component */}
+                <Icon name="Cpu" size="medium" />
               </ProcessingOptionIcon>
             </ProcessingOptionHeader>
 
@@ -309,19 +294,8 @@ const ProcessingSettings: React.FC<ProcessingSettingsProps> = ({
                 Enhanced API Processing
               </ProcessingOptionTitle>
               <ProcessingOptionIcon>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M18 10h-4V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v6H2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2z"></path>
-                </svg>
+                {/* Replace SVG with Icon component */}
+                <Icon name="Server" size="medium" />
               </ProcessingOptionIcon>
             </ProcessingOptionHeader>
 
@@ -397,21 +371,6 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   width: 100%;
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  margin-bottom: ${(props) => props.theme.spacing.lg};
-`;
-
-// Der alte BackButton und BackButtonText werden entfernt, da sie durch die standardisierte Komponente ersetzt wurden
-
-const Title = styled.h2`
-  font-size: ${(props) => props.theme.typography.fontSize.xl};
-  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
-  color: ${(props) => props.theme.colors.text.primary};
-  margin-left: ${(props) => props.theme.spacing.md};
 `;
 
 const SettingsSection = styled.section`

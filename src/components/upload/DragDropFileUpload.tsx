@@ -2,12 +2,19 @@ import React, { useState, useRef, useCallback } from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useUpload } from "../../context/UploadContext";
-// Importieren der standardisierten Komponenten
-import { Button, IconTextButton } from "../shared/buttons";
+// Standardized imports from index files
+import { Button } from "../shared/buttons";
 import { EmptyUpload } from "../shared/empty";
+import { Icon } from "../shared/icons";
 
-const DragDropFileUpload: React.FC = () => {
-  const { addFiles, files } = useUpload();
+interface DragDropFileUploadProps {
+  isAddingMore?: boolean; // Flag to indicate "Add More" mode
+}
+
+const DragDropFileUpload: React.FC<DragDropFileUploadProps> = ({
+  isAddingMore = false,
+}) => {
+  const { addFiles, files, goToNextStep } = useUpload();
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -41,9 +48,14 @@ const DragDropFileUpload: React.FC = () => {
 
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         addFiles(Array.from(e.dataTransfer.files));
+
+        // In "Add More" mode, immediately go to preview after adding files
+        if (isAddingMore) {
+          goToNextStep();
+        }
       }
     },
-    [addFiles]
+    [addFiles, isAddingMore, goToNextStep]
   );
 
   // Dateiauswahl-Handler
@@ -57,9 +69,14 @@ const DragDropFileUpload: React.FC = () => {
         addFiles(Array.from(e.target.files));
         // Zurücksetzen des Inputs, damit das gleiche File erneut ausgewählt werden kann
         e.target.value = "";
+
+        // In "Add More" mode, immediately go to preview after adding files
+        if (isAddingMore) {
+          goToNextStep();
+        }
       }
     },
-    [addFiles]
+    [addFiles, isAddingMore, goToNextStep]
   );
 
   // Kamera-Handler (nur mobile)
@@ -80,6 +97,19 @@ const DragDropFileUpload: React.FC = () => {
 
   // Überprüfen der Bildschirmgröße für mobile Geräte
   const isMobile = window.innerWidth <= 768;
+
+  // View selected images (in "Add More" mode)
+  const handleViewSelection = () => {
+    if (isAddingMore) {
+      goToNextStep();
+    }
+  };
+
+  // Custom title and description for "Add More" mode
+  const uploadTitle = isAddingMore ? "Add More Documents" : "Upload Documents";
+  const uploadDesc = isAddingMore
+    ? "Add more files to your selection"
+    : "Drag and drop files here or use the buttons below";
 
   // Rückgabeindikator anzeigen, wenn bereits Dateien ausgewählt wurden
   const showSelectionIndicator = files.length > 0;
@@ -107,39 +137,23 @@ const DragDropFileUpload: React.FC = () => {
             <IndicatorText>
               {files.length} {files.length === 1 ? "file" : "files"} selected
             </IndicatorText>
-            <Button
-              variant="text"
-              onClick={() => console.log("View selection")}
-            >
+            <Button variant="text" onClick={handleViewSelection}>
               View Selection
             </Button>
           </SelectionIndicator>
 
           <ContentWrapper>
-            <UploadIcon
+            <UploadIconWrapper
               as={motion.div}
               animate={{ scale: isDragging ? 1.1 : 1 }}
             >
-              <svg
-                width="64"
-                height="64"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04ZM19 18H6C3.79 18 2 16.21 2 14C2 11.95 3.53 10.24 5.56 10.03L6.63 9.92L7.13 8.97C8.08 7.14 9.94 6 12 6C14.62 6 16.88 7.86 17.39 10.43L17.69 11.93L19.22 12.04C20.78 12.14 22 13.45 22 15C22 16.65 20.65 18 19 18ZM8 13H10.55V16H13.45V13H16L12 9L8 13Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </UploadIcon>
+              <Icon name="Upload" size="large" color="currentColor" />
+            </UploadIconWrapper>
 
-            <Title>Upload Documents</Title>
+            <Title>{uploadTitle}</Title>
 
             <Description>
-              {isDragging
-                ? "Drop files here..."
-                : "Drag and drop files here or use the buttons below"}
+              {isDragging ? "Drop files here..." : uploadDesc}
             </Description>
 
             <ButtonGroup>
@@ -165,8 +179,8 @@ const DragDropFileUpload: React.FC = () => {
           onDrag={setIsDragging}
           isDragging={isDragging}
           dragEnabled={true}
-          customTitle="Upload Documents"
-          customDescription="Drag and drop files here or select them using the button below"
+          customTitle={uploadTitle}
+          customDescription={uploadDesc}
           secondaryActionText={isMobile ? "Take Photo" : undefined}
           onSecondaryAction={isMobile ? handleCameraCapture : undefined}
         />
@@ -227,9 +241,15 @@ const ContentWrapper = styled.div`
   max-width: 500px;
 `;
 
-const UploadIcon = styled.div`
+// Fixed: Use proper icon wrapper without directly manipulating inner elements
+const UploadIconWrapper = styled.div`
   color: ${(props) => props.theme.colors.text.secondary};
   margin-bottom: ${(props) => props.theme.spacing.lg};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
 `;
 
 const Title = styled.h2`

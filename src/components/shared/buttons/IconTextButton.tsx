@@ -3,6 +3,8 @@ import styled from "styled-components";
 import { motion } from "framer-motion";
 import { ButtonVariant, ButtonSize } from "./Button";
 import LoadingSpinner from "./LoadingSpinner";
+import Icon, { IconProps } from "../icons/Icon"; // Import the Icon component
+import * as LucideIcons from "lucide-react";
 
 export interface IconTextButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -10,8 +12,12 @@ export interface IconTextButtonProps
   size?: ButtonSize;
   fullWidth?: boolean;
   isLoading?: boolean;
-  icon: React.ReactNode;
+  iconName: keyof typeof LucideIcons; // Changed from icon: React.ReactNode
   iconPosition?: "left" | "right";
+  iconColor?: string; // Add optional icon color
+
+  // For backward compatibility during transition
+  icon?: React.ReactNode;
 }
 
 const StyledIconTextButton = styled(motion.button)<{
@@ -108,17 +114,10 @@ const StyledIconTextButton = styled(motion.button)<{
     }
   }}
 
-  /* Icon-Container für konsistente Größe */
   .icon-container {
     display: flex;
     align-items: center;
     justify-content: center;
-    
-    svg {
-      width: 24px;
-      height: 24px;
-      pointer-events: none;
-    }
   }
 `;
 
@@ -127,8 +126,10 @@ export const IconTextButton: React.FC<IconTextButtonProps> = ({
   size = "medium",
   fullWidth = false,
   isLoading = false,
-  icon,
+  iconName,
+  icon, // Keep for backward compatibility
   iconPosition = "left",
+  iconColor,
   children,
   disabled,
   ...rest
@@ -138,6 +139,25 @@ export const IconTextButton: React.FC<IconTextButtonProps> = ({
     hover: { scale: 1.02 },
     tap: { scale: 0.98 },
   };
+
+  // Map button size to icon size
+  const getIconSize = (buttonSize: ButtonSize): IconProps["size"] => {
+    switch (buttonSize) {
+      case "small":
+        return "small";
+      case "large":
+        return "large";
+      default:
+        return "medium";
+    }
+  };
+
+  // Warning for deprecated usage
+  if (process.env.NODE_ENV !== "production" && icon && !iconName) {
+    console.warn(
+      'IconTextButton: Using the "icon" prop is deprecated. Please use "iconName" instead.'
+    );
+  }
 
   return (
     <StyledIconTextButton
@@ -152,12 +172,22 @@ export const IconTextButton: React.FC<IconTextButtonProps> = ({
       {...rest}
     >
       {isLoading ? (
-        <LoadingSpinner 
-          size={size === "small" ? 16 : size === "large" ? 24 : 20} 
+        <LoadingSpinner
+          size={size === "small" ? 16 : size === "large" ? 24 : 20}
         />
       ) : (
         <>
-          <span className="icon-container">{icon}</span>
+          <span className="icon-container">
+            {iconName ? (
+              <Icon
+                name={iconName}
+                size={getIconSize(size)}
+                color={iconColor}
+              />
+            ) : (
+              icon // Fallback to legacy icon prop
+            )}
+          </span>
           <span>{children}</span>
         </>
       )}

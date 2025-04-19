@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { AnimatePresence } from "framer-motion";
 import { useSearch } from "../../context/SearchContext";
 import { Tag as TagType } from "../../context/UploadContext";
-// Direkter Import der Tag-Komponente
+// Import Tag directly from its file, not through the index
 import Tag from "../shared/tags/Tag";
 
 const TagFilterList: React.FC = () => {
@@ -22,6 +22,7 @@ const TagFilterList: React.FC = () => {
   // Hier würden wir normalerweise die Tags aus dem richtigen Kontext laden
   useEffect(() => {
     // Später: Lade die tatsächlichen Tags aus dem System
+    // z.B. durch einen Service-Aufruf oder Integration mit dem UploadContext
   }, []);
 
   if (availableTags.length === 0) {
@@ -37,7 +38,7 @@ const TagFilterList: React.FC = () => {
             <Tag
               key={tag.id}
               color={tag.color}
-              isActive={selectedTags.includes(tag.name)}
+              isActive={selectedTags?.includes(tag.name)}
               onClick={() => toggleTagFilter(tag.name)}
             >
               {tag.name}

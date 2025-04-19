@@ -77,27 +77,34 @@ const NavigationDemo: React.FC = () => {
         <SectionTitle>Back Button Variations</SectionTitle>
         <DemoGrid>
           <DemoBox>
-            <BackButton onClick={() => {}} size="small">
-              Small
-            </BackButton>
+            <BackButton
+              onClick={() => {}}
+              size="small"
+              showLabel={false}
+              label="Small"
+            />
           </DemoBox>
           <DemoBox>
-            <BackButton onClick={() => {}}>Default</BackButton>
+            <BackButton onClick={() => {}} showLabel={false} label="Default" />
           </DemoBox>
           <DemoBox>
-            <BackButton onClick={() => {}} size="large">
-              Large
-            </BackButton>
+            <BackButton
+              onClick={() => {}}
+              size="large"
+              showLabel={false}
+              label="Large"
+            />
           </DemoBox>
           <DemoBox>
-            <BackButton onClick={() => {}} variant="text">
-              Text Variant
-            </BackButton>
+            <BackButton
+              onClick={() => {}}
+              variant="text"
+              showLabel={true}
+              label="Text Variant"
+            />
           </DemoBox>
           <DemoBox>
-            <BackButton onClick={() => {}} iconOnly>
-              {/* Icon Only */}
-            </BackButton>
+            <BackButton onClick={() => {}} iconOnly={true} label="Icon Only" />
           </DemoBox>
         </DemoGrid>
       </Section>

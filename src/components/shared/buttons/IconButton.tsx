@@ -3,13 +3,19 @@ import styled from "styled-components";
 import { motion } from "framer-motion";
 import { ButtonSize } from "./Button";
 import LoadingSpinner from "./LoadingSpinner";
+import Icon, { IconProps } from "../icons/Icon"; // Import the Icon component
+import * as LucideIcons from "lucide-react";
 
 export interface IconButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
-  icon: React.ReactNode;
+  iconName: keyof typeof LucideIcons; // Changed from icon: React.ReactNode
   variant?: "primary" | "text";
   isLoading?: boolean;
+  iconColor?: string; // Add optional icon color
+
+  // For backward compatibility during transition
+  icon?: React.ReactNode;
 }
 
 const StyledIconButton = styled(motion.button)<{
@@ -26,7 +32,7 @@ const StyledIconButton = styled(motion.button)<{
   border-radius: 50%;
   padding: 0;
   overflow: hidden;
-  
+
   /* Größenspezifische Styles mit festen Dimensionen */
   ${(props) => {
     switch (props.$size) {
@@ -100,20 +106,15 @@ const StyledIconButton = styled(motion.button)<{
         `;
     }
   }}
-  
-  /* SVG-Styling für Icons */
-  svg {
-    width: 24px;
-    height: 24px;
-    pointer-events: none;
-  }
 `;
 
 export const IconButton: React.FC<IconButtonProps> = ({
   size = "medium",
-  icon,
+  iconName,
+  icon, // Keep for backward compatibility
   variant = "text",
   isLoading = false,
+  iconColor,
   disabled,
   ...rest
 }) => {
@@ -122,6 +123,25 @@ export const IconButton: React.FC<IconButtonProps> = ({
     hover: { scale: 1.05 },
     tap: { scale: 0.95 },
   };
+
+  // Map button size to icon size
+  const getIconSize = (buttonSize: ButtonSize): IconProps["size"] => {
+    switch (buttonSize) {
+      case "small":
+        return "small";
+      case "large":
+        return "large";
+      default:
+        return "medium";
+    }
+  };
+
+  // Warning for deprecated usage
+  if (process.env.NODE_ENV !== "production" && icon && !iconName) {
+    console.warn(
+      'IconButton: Using the "icon" prop is deprecated. Please use "iconName" instead.'
+    );
+  }
 
   return (
     <StyledIconButton
@@ -134,11 +154,13 @@ export const IconButton: React.FC<IconButtonProps> = ({
       {...rest}
     >
       {isLoading ? (
-        <LoadingSpinner 
-          size={size === "small" ? 16 : size === "large" ? 24 : 20} 
+        <LoadingSpinner
+          size={size === "small" ? 16 : size === "large" ? 24 : 20}
         />
+      ) : iconName ? (
+        <Icon name={iconName} size={getIconSize(size)} color={iconColor} />
       ) : (
-        icon
+        icon // Fallback to legacy icon prop
       )}
     </StyledIconButton>
   );

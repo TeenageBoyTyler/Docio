@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUpload, Tag as TagType } from "../../context/UploadContext";
-// Direkter Import der Tag-Komponente
+// Fix the import to use the direct file path
 import Tag from "../shared/tags/Tag";
-// Import der standardisierten Komponenten
+// Standardized imports
 import { ColorPicker, TextField } from "../shared/inputs";
+import { Icon } from "../shared/icons";
 
 interface TagSelectorProps {
   fileId: string;
@@ -82,7 +83,10 @@ const TagSelector: React.FC<TagSelectorProps> = ({ fileId }) => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            + Add New Tag
+            <AddTagButtonContent>
+              <Icon name="Plus" size="small" />
+              <span>Add New Tag</span>
+            </AddTagButtonContent>
           </AddTagButton>
         ) : (
           <TagCreationContainer>
@@ -150,6 +154,8 @@ const AddTagButton = styled.button`
   font-size: ${(props) => props.theme.typography.fontSize.sm};
   cursor: pointer;
   transition: all ${(props) => props.theme.transitions.short};
+  width: auto;
+  display: inline-flex;
 
   &:hover {
     border-color: ${(props) => props.theme.colors.primary};
@@ -157,11 +163,15 @@ const AddTagButton = styled.button`
   }
 `;
 
+const AddTagButtonContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${(props) => props.theme.spacing.xs};
+`;
+
 const TagCreationContainer = styled.div`
   display: flex;
   flex-direction: column;
 `;
-
-// Das alte TagInput wurde entfernt, da es durch die standardisierte TextField-Komponente ersetzt wurde
 
 export default TagSelector;

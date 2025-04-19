@@ -17,6 +17,8 @@ import EmptyDemo from "./components/demo/EmptyDemo";
 import InputDemo from "./components/demo/InputDemo";
 import ButtonDemo from "./components/demo/ButtonDemo";
 import NavigationDemo from "./components/demo/NavigationDemo";
+import HeaderDemo from "./components/demo/HeaderDemo"; // Import new HeaderDemo
+import IconDemo from "./components/demo/IconDemo";
 
 function App() {
   return (
@@ -43,11 +45,12 @@ function App() {
                     <Route path="/demo/empty" element={<EmptyDemo />} />
                     <Route path="/demo/input" element={<InputDemo />} />
                     <Route path="/demo/button" element={<ButtonDemo />} />
+                    <Route path="/demo/icons" element={<IconDemo />} />
                     <Route
                       path="/demo/navigation"
                       element={<NavigationDemo />}
                     />
-                    {/* Neue Route */}
+                    <Route path="/demo/header" element={<HeaderDemo />} />
                   </Routes>
                 </ProfileProvider>
               </SearchProvider>

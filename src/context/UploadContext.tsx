@@ -109,8 +109,23 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
         return true;
       });
 
+      // Filter out duplicates based on filename and size
+      const nonDuplicateFiles = validFiles.filter((newFile) => {
+        const isDuplicate = files.some(
+          (existingFile) =>
+            existingFile.name === newFile.name &&
+            existingFile.size === newFile.size
+        );
+
+        if (isDuplicate) {
+          showToast(`"${newFile.name}" is already in the queue`, "info");
+          return false;
+        }
+        return true;
+      });
+
       // Erstelle UploadFile-Objekte mit IDs, Vorschau-URLs und leeren Tags
-      const newUploadFiles = validFiles.map((file) => {
+      const newUploadFiles = nonDuplicateFiles.map((file) => {
         const id = Math.random().toString(36).substring(2, 11);
         const preview = URL.createObjectURL(file);
         return Object.assign(file, { id, preview, tags: [] }) as UploadFile;
@@ -118,13 +133,20 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
 
       setFiles((prevFiles) => [...prevFiles, ...newUploadFiles]);
     },
-    [showToast]
+    [showToast, files]
   );
 
   // Datei entfernen
   const removeFile = useCallback(
     (id: string) => {
       setFiles((prevFiles) => {
+        // Find the file to get its preview URL
+        const fileToRemove = prevFiles.find((file) => file.id === id);
+        if (fileToRemove) {
+          // Revoke the Object URL to prevent memory leaks
+          URL.revokeObjectURL(fileToRemove.preview);
+        }
+
         const updatedFiles = prevFiles.filter((file) => file.id !== id);
 
         // Gehe zurück zum Auswahlschritt, wenn keine Dateien mehr übrig sind
@@ -143,11 +165,16 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
 
   // Alle Dateien entfernen
   const clearFiles = useCallback(() => {
+    // Revoke all Object URLs to prevent memory leaks
+    files.forEach((file) => {
+      URL.revokeObjectURL(file.preview);
+    });
+
     setFiles([]);
     setProcessedDocuments([]);
     // Zurücksetzen auf den Auswahlschritt
     setCurrentStep("selection");
-  }, []);
+  }, [files]);
 
   // Zu einem bestimmten Schritt gehen
   const goToStep = useCallback((step: UploadStep) => {

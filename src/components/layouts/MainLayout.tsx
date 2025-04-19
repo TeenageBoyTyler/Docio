@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigation } from "../../context/NavigationContext";
+import { useUpload } from "../../context/UploadContext";
 
 // Import der Sektionskomponenten
 import UploadSectionWrapper from "../upload/UploadSection";
@@ -140,6 +141,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Navigation-Context verwenden
   const { activeSection, navigateTo } = useNavigation();
 
+  // Get upload context at the top level
+  const uploadContext = useUpload();
+
   // Effekt, um den vorherigen Abschnitt zu aktualisieren
   useEffect(() => {
     if (previousSection !== activeSection) {
@@ -147,17 +151,37 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   }, [activeSection, previousSection]);
 
-  // Handler für Abschnittswechsel
+  // Ultra simple section change handler - just navigate directly
   const handleSectionChange = (section: ActiveSection) => {
     if (section !== activeSection && !isAnimating) {
+      console.log("Section change requested:", section);
+
+      // Check if we're currently uploading files and moving away from upload section
+      const hasActiveUploads =
+        activeSection === "upload" &&
+        uploadContext.files.length > 0 &&
+        uploadContext.currentStep !== "success";
+
+      if (hasActiveUploads) {
+        // For now, we'll just log a message and continue with navigation
+        console.log("Note: Navigating away from active uploads");
+
+        // Optional: Use a simple browser confirm if you want a basic confirmation dialog
+        // that doesn't rely on React components
+        // if (!window.confirm("You have uploads in progress. Navigating away will discard these files. Do you want to continue?")) {
+        //   return; // Cancel navigation if user clicks Cancel
+        // }
+      }
+
+      // Proceed with navigation
       setIsAnimating(true);
       setPreviousSection(activeSection);
       navigateTo(section);
 
-      // Animation als beendet markieren nach Verzögerung
+      // Reset animation flag after delay
       setTimeout(() => {
         setIsAnimating(false);
-      }, 500); // Entspricht der Animationsdauer
+      }, 500);
     }
   };
 

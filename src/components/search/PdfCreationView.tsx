@@ -4,7 +4,13 @@ import { useSearch } from "../../context/SearchContext";
 // Importieren der standardisierten Komponenten
 import { Button, IconTextButton } from "../shared/buttons";
 import { Spinner, LoadingOverlay, LoadingText } from "../shared/loading";
-import BackButton from "../shared/navigation/BackButton";
+import {
+  BackButton,
+  BackButtonContainer,
+  HeaderContainer,
+  Title,
+} from "../shared/navigation";
+import Icon from "../shared/icons/Icon";
 
 const PdfCreationView: React.FC = () => {
   const {
@@ -33,14 +39,14 @@ const PdfCreationView: React.FC = () => {
       }
     };
 
-    if (selectedDocuments.length > 0 && !pdfUrl) {
+    if (selectedDocuments && selectedDocuments.length > 0 && !pdfUrl) {
       generatePdf();
     }
   }, [selectedDocuments, createPdf, orientation, pdfUrl]);
 
   // Wenn keine Dokumente ausgewählt sind, zurück zur Auswahl
   useEffect(() => {
-    if (selectedDocuments.length === 0) {
+    if (!selectedDocuments || selectedDocuments.length === 0) {
       goToStep("results");
     }
   }, [selectedDocuments, goToStep]);
@@ -76,18 +82,7 @@ const PdfCreationView: React.FC = () => {
       return (
         <ErrorContainer>
           <ErrorIcon>
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM11 15H13V17H11V15ZM11 7H13V13H11V7Z"
-                fill="currentColor"
-              />
-            </svg>
+            <Icon name="AlertCircle" size="large" color="currentColor" />
           </ErrorIcon>
           <ErrorTitle>Fehler bei der PDF-Erstellung</ErrorTitle>
           <ErrorText>{error}</ErrorText>
@@ -108,23 +103,12 @@ const PdfCreationView: React.FC = () => {
       return (
         <SuccessContainer>
           <SuccessIcon>
-            <svg
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM16.59 7.58L10 14.17L7.41 11.59L6 13L10 17L18 9L16.59 7.58Z"
-                fill="currentColor"
-              />
-            </svg>
+            <Icon name="CheckCircle" size="large" color="currentColor" />
           </SuccessIcon>
           <SuccessTitle>PDF erfolgreich erstellt</SuccessTitle>
           <SuccessText>
-            {selectedDocuments.length}{" "}
-            {selectedDocuments.length === 1
+            {selectedDocuments?.length || 0}{" "}
+            {(selectedDocuments?.length || 0) === 1
               ? "Dokument wurde"
               : "Dokumente wurden"}{" "}
             zu einem PDF zusammengefügt.
@@ -132,20 +116,7 @@ const PdfCreationView: React.FC = () => {
 
           <ButtonGroup>
             <IconTextButton
-              icon={
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M19 9H15V3H9V9H5L12 16L19 9ZM5 18V20H19V18H5Z"
-                    fill="currentColor"
-                  />
-                </svg>
-              }
+              icon={<Icon name="Download" size="medium" color="currentColor" />}
               onClick={handleDownload}
               variant="primary"
             >
@@ -173,22 +144,24 @@ const PdfCreationView: React.FC = () => {
     <Container>
       {/* LoadingOverlay für den gesamten Prozess, wenn isLoading true ist */}
       <LoadingOverlay
-        isVisible={isLoading && selectedDocuments.length > 3}
+        isVisible={
+          isLoading && selectedDocuments && selectedDocuments.length > 3
+        }
         text="PDF wird erstellt..."
         blockInteraction={true}
         opacity={0.7}
       />
 
-      <Header>
-        {/* Ersetzen des regulären Buttons durch den standardisierten BackButton */}
+      {/* Verwendung des standardisierten HeaderContainer */}
+      <HeaderContainer>
         <BackButton
           onClick={goToPreviousStep}
           label="Zurück zu Aktionen"
           showLabel={true}
           variant="text"
         />
-        <Title>PDF erstellen</Title>
-      </Header>
+        <Title size="large">PDF erstellen</Title>
+      </HeaderContainer>
 
       <ContentContainer>{renderContent()}</ContentContainer>
     </Container>
@@ -202,19 +175,6 @@ const Container = styled.div`
   width: 100%;
   height: 100%;
   padding: ${(props) => props.theme.spacing.lg};
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  margin-bottom: ${(props) => props.theme.spacing.lg};
-`;
-
-const Title = styled.h2`
-  font-size: ${(props) => props.theme.typography.fontSize.xl};
-  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
-  color: ${(props) => props.theme.colors.text.primary};
-  margin-left: ${(props) => props.theme.spacing.md};
 `;
 
 const ContentContainer = styled.div`

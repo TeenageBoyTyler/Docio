@@ -12,8 +12,10 @@ import { Spinner } from "../shared/loading";
 import { Button, IconButton } from "../shared/buttons";
 import { TextField } from "../shared/inputs";
 import { ColorPicker, ColorOption } from "../shared/inputs";
-// Import der standardisierten BackButton-Komponente
-import BackButton from "../shared/navigation/BackButton";
+// Import der standardisierten Navigation-Komponenten
+import { BackButton, HeaderContainer, Title } from "../shared/navigation";
+// Import der neuen Icon-Komponente
+import { Icon } from "../shared/icons";
 
 interface TagsManagementProps {
   onNavigate: (view: ProfileView) => void;
@@ -118,62 +120,6 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
     a.name.localeCompare(b.name)
   );
 
-  // Add Icon für den Button
-  const AddIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-
-  // Edit Icon für den Button
-  const EditIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-      <path d="m15 5 4 4" />
-    </svg>
-  );
-
-  // Delete Icon für den Button
-  const DeleteIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 6h18" />
-      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-      <line x1="10" y1="11" x2="10" y2="17" />
-      <line x1="14" y1="11" x2="14" y2="17" />
-    </svg>
-  );
-
   // Rendere den Tag-Editor
   const renderTagEditor = () => {
     return (
@@ -251,25 +197,28 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
 
   return (
     <Container>
-      <Header>
-        {/* Standardisierte BackButton-Komponente statt benutzerdefiniertem Button */}
-        <BackButton
-          onClick={() => onNavigate("home")}
-          label="Back to Profile"
-          showLabel={true}
-          variant="text"
-        />
+      {/* Standardisierter HeaderContainer mit Lucide Icon */}
+      <HeaderContainer
+        leftContent={
+          <BackButton
+            onClick={() => onNavigate("home")}
+            label="Back to Profile"
+            showLabel={true}
+            variant="text"
+          />
+        }
+        rightContent={
+          <Button
+            variant="primary"
+            onClick={handleCreateTag}
+            startIcon={<Icon name="Plus" size="small" />}
+          >
+            Add New Tag
+          </Button>
+        }
+      >
         <Title>My Tags</Title>
-
-        {/* Standardisierter Button für "Add New Tag" */}
-        <Button
-          variant="primary"
-          onClick={handleCreateTag}
-          startIcon={<AddIcon />}
-        >
-          Add New Tag
-        </Button>
-      </Header>
+      </HeaderContainer>
 
       <AnimatePresence mode="wait">
         {editMode ? (
@@ -288,23 +237,7 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
                     actionText="Create First Tag"
                     onAction={handleCreateTag}
                     size="large"
-                    icon={
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="64"
-                        height="64"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M9 5H2v7l6.29 6.29c.39.39 1.02.39 1.41 0l6.3-6.3a1 1 0 0 0 0-1.41l-6.29-6.29A1 1 0 0 0 9 5Z" />
-                        <path d="M6 9.01V9" />
-                        <path d="m15 5 6.3 6.3a1 1 0 0 1 0 1.4l-6.3 6.3a1 1 0 0 1-1.4 0L7.7 13" />
-                      </svg>
-                    }
+                    icon={<Icon name="Tags" size="large" />}
                     description="Create tags to help organize your documents. Tags can be added to documents during upload or search."
                   />
                 ) : (
@@ -327,18 +260,18 @@ const TagsManagement: React.FC<TagsManagementProps> = ({ onNavigate }) => {
                           </TagCardCount>
                         </TagCardContent>
                         <TagCardActions>
-                          {/* Standardisierte IconButton-Komponenten */}
+                          {/* Standardisierte IconButton-Komponenten mit Lucide Icons */}
                           <IconButton
                             variant="text"
                             onClick={() => handleEditTag(tag)}
                             title="Edit Tag"
-                            icon={<EditIcon />}
+                            icon={<Icon name="Pencil" size="small" />}
                           />
                           <IconButton
                             variant="text"
                             onClick={() => handleDeleteTag(tag.id)}
                             title="Delete Tag"
-                            icon={<DeleteIcon />}
+                            icon={<Icon name="Trash2" size="small" />}
                           />
                         </TagCardActions>
                       </TagCard>
@@ -360,20 +293,6 @@ const Container = styled.div`
   flex-direction: column;
   height: 100%;
   width: 100%;
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  margin-bottom: ${(props) => props.theme.spacing.lg};
-`;
-
-const Title = styled.h2`
-  font-size: ${(props) => props.theme.typography.fontSize.xl};
-  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
-  color: ${(props) => props.theme.colors.text.primary};
-  flex: 1;
-  margin: 0 ${(props) => props.theme.spacing.md};
 `;
 
 const ContentContainer = styled.div`

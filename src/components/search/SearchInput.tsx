@@ -1,130 +1,255 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearch } from "../../context/SearchContext";
 import SearchFilterButtons from "./SearchFilterButtons";
 import TagFilterList from "./TagFilterList";
-// Importieren der standardisierten Komponenten
-import { Button } from "../shared/buttons";
-import { SearchField } from "../shared/inputs";
+// Import standardisierte Komponenten
+import Icon from "../shared/icons/Icon";
+import { IconButton } from "../shared/buttons";
 
 const SearchInput: React.FC = () => {
   const {
-    query,
-    setQuery,
-    search,
-    isLoading,
-    selectedDocuments,
-    clearSelection,
-    goToStep,
-    selectedTags,
-    clearFilters,
+    query, // Geändert von searchQuery zu query (wie im Context definiert)
+    setQuery, // Geändert von setSearchQuery zu setQuery
+    search, // Geändert von performSearch zu search
+    clearFilters, // Verwende clearFilters statt clearSearch
+    results, // Geändert von searchResults zu results
+    selectedDocuments, // Geändert von selectedItems zu selectedDocuments
+    goToStep, // Verwende goToStep für Navigation
+    filter, // Filter-Typ (all, text, objects)
+    selectedTags, // Ausgewählte Tags für die Filterung
   } = useSearch();
 
-  // Handler für Suchanfrage-Änderung
-  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [showSelectedPreview, setShowSelectedPreview] = useState(false);
+
+  // Automatischer Fokus auf das Suchfeld beim Laden
+  useEffect(() => {
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 300);
+  }, []);
+
+  // Handle Änderungen im Suchfeld
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
   };
 
-  // Handler für Suche
-  const handleSearch = () => {
-    search();
-  };
-
-  // Handler für Eingabe löschen
-  const handleClearQuery = () => {
-    setQuery("");
-  };
-
-  // Handler für Enter-Taste
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+  // Handle Suche bei Drücken der Enter-Taste
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && query.trim()) {
       search();
     }
   };
 
-  // Zeige Auswahl-Indikator, wenn Dokumente ausgewählt sind
-  const showSelectionIndicator = selectedDocuments.length > 0;
-
-  // Handler für Klick auf Selection-Indikator
-  const handleSelectionClick = () => {
-    goToStep("results");
+  // Bereinigt nur die Suche und setzt den Fokus zurück ins Suchfeld
+  const handleClearSearch = () => {
+    setQuery("");
+    inputRef.current?.focus();
   };
 
-  // Handler für Abbrechen der Auswahl
-  const handleClearSelection = () => {
-    clearSelection();
-  };
-
-  // Handler für Filter-Button-Klick (jetzt zum Löschen aller Filter)
-  const handleFilterClick = () => {
+  // Bereinigt nur die Tag-Filter
+  const handleClearTagFilters = () => {
     clearFilters();
+    inputRef.current?.focus();
   };
 
-  // Aktive Filter anzeigen
-  const activeFiltersCount = selectedTags.length;
+  // Zählt nur die ausgewählten Tags
+  const getTagFiltersCount = () => {
+    return selectedTags ? selectedTags.length : 0;
+  };
+
+  const tagFiltersCount = getTagFiltersCount();
+
+  // Zeigt die Vorschau der ausgewählten Elemente an
+  const toggleSelectedPreview = () => {
+    setShowSelectedPreview(!showSelectedPreview);
+  };
+
+  // Geht zur Aktionsansicht, wenn bereits Elemente ausgewählt sind
+  const handleProceedWithSelection = () => {
+    if (selectedDocuments && selectedDocuments.length > 0) {
+      goToStep("actions");
+    }
+  };
 
   return (
     <Container>
-      <AnimatePresence>
-        {/* Auswahl-Indikator, wenn Dokumente ausgewählt wurden */}
-        {showSelectionIndicator && (
-          <SelectionIndicator
-            as={motion.div}
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <SelectionText onClick={handleSelectionClick}>
+      {/* Anzeige für ausgewählte Elemente */}
+      {selectedDocuments && selectedDocuments.length > 0 && (
+        <SelectedIndicator
+          onClick={toggleSelectedPreview}
+          as={motion.div}
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <SelectedCount>
+            <Icon name="Check" size="small" color="#4CAF50" />
+            <span>
               {selectedDocuments.length}{" "}
-              {selectedDocuments.length === 1 ? "Dokument" : "Dokumente"}{" "}
-              ausgewählt
-            </SelectionText>
-            <Button variant="text" onClick={handleClearSelection} size="small">
-              Auswahl löschen
-            </Button>
-          </SelectionIndicator>
+              {selectedDocuments.length === 1 ? "item" : "items"} selected
+            </span>
+          </SelectedCount>
+          <ViewSelectionButton onClick={handleProceedWithSelection}>
+            Proceed
+          </ViewSelectionButton>
+        </SelectedIndicator>
+      )}
+
+      {/* Ausgewählte Elemente Vorschau */}
+      <AnimatePresence>
+        {showSelectedPreview && selectedDocuments && (
+          <SelectedPreviewOverlay
+            onClick={() => setShowSelectedPreview(false)}
+            as={motion.div}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <SelectedPreviewContent
+              onClick={(e) => e.stopPropagation()}
+              as={motion.div}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <SelectedPreviewHeader>
+                <SelectedPreviewTitle>Selected Items</SelectedPreviewTitle>
+                <IconButton
+                  iconName="X"
+                  variant="text"
+                  onClick={() => setShowSelectedPreview(false)}
+                />
+              </SelectedPreviewHeader>
+
+              <SelectedItemsGrid>
+                {selectedDocuments.map((item) => (
+                  <SelectedItemThumb key={item.id}>
+                    <img src={item.preview} alt={item.name} />
+                  </SelectedItemThumb>
+                ))}
+              </SelectedItemsGrid>
+
+              <ProceedButton onClick={handleProceedWithSelection}>
+                Continue with Selection
+              </ProceedButton>
+            </SelectedPreviewContent>
+          </SelectedPreviewOverlay>
         )}
       </AnimatePresence>
 
-      <SearchForm
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSearch();
+      {/* Hauptsuchfeld */}
+      <SearchFieldContainer
+        $isFocused={isFocused}
+        as={motion.div}
+        animate={{
+          scale: results && results.length > 0 ? 0.95 : 1,
+          y: results && results.length > 0 ? -20 : 0,
         }}
+        transition={{ duration: 0.3 }}
       >
-        {/* Standardisierte SearchField-Komponente */}
+        <SearchIconWrapper>
+          <Icon name="Search" size="medium" color="currentColor" />
+        </SearchIconWrapper>
+
         <SearchField
+          type="text"
+          placeholder="Search documents..."
           value={query}
-          onChange={handleQueryChange}
+          onChange={handleSearchChange}
           onKeyDown={handleKeyDown}
-          placeholder="Dokumente durchsuchen..."
-          onSearch={handleSearch}
-          onClear={handleClearQuery}
-          isLoading={isLoading}
-          showFilterButton={activeFiltersCount > 0}
-          onFilterClick={handleFilterClick}
-          activeFilters={activeFiltersCount}
-          fullWidth
-          type="text" // Ändere den Typ von "search" zu "text", um das native X zu vermeiden
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          ref={inputRef}
         />
 
-        <SearchButton variant="primary" type="submit" disabled={isLoading}>
-          Suchen
+        <InputActionsContainer>
+          {/* "X" Button erscheint nur, wenn Text vorhanden ist */}
+          {query && (
+            <ClearButton
+              onClick={handleClearSearch}
+              as={motion.button}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Icon name="X" size="small" color="currentColor" />
+            </ClearButton>
+          )}
+
+          {/* Der Filter-Counter erscheint nur, wenn Tags ausgewählt sind */}
+          {tagFiltersCount > 0 && (
+            <ClearButton
+              onClick={handleClearTagFilters}
+              as={motion.button}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="filter-counter-button"
+            >
+              <TagFilterContainer>
+                <TagCount>{tagFiltersCount}</TagCount>
+                <Icon name="Tag" size="medium" color="#BB86FC" />{" "}
+                {/* Using exact primary color value */}
+              </TagFilterContainer>
+            </ClearButton>
+          )}
+        </InputActionsContainer>
+
+        <SearchButton
+          onClick={() => query && query.trim() && search()}
+          disabled={!query || !query.trim()}
+          as={motion.button}
+          whileHover={query && query.trim() ? { scale: 1.05 } : undefined}
+          whileTap={query && query.trim() ? { scale: 0.95 } : undefined}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14Z"
+              fill="currentColor"
+            />
+          </svg>
         </SearchButton>
-      </SearchForm>
+      </SearchFieldContainer>
 
-      {/* Filter-Buttons für Text/Objekte */}
-      <SearchFilterButtons />
+      {/* Filter-Optionen */}
+      <FiltersContainer
+        as={motion.div}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.3 }}
+      >
+        <SearchFilterButtons />
+      </FiltersContainer>
 
-      {/* Tag-Filter-Liste */}
-      <TagFilterList />
+      {/* Tag-Filter */}
+      <TagsContainer
+        as={motion.div}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.3 }}
+      >
+        <TagFilterList />
+      </TagsContainer>
     </Container>
   );
 };
 
-// Styled Components
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -132,93 +257,329 @@ const Container = styled.div`
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: ${(props) => props.theme.spacing.xl};
+  padding: ${(props) => props.theme.spacing.lg};
+  position: relative;
+  overflow: hidden;
 `;
 
-const SearchForm = styled.form`
+interface SearchFieldContainerProps {
+  $isFocused: boolean;
+}
+
+const SearchFieldContainer = styled.div<SearchFieldContainerProps>`
   display: flex;
+  align-items: center;
   width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-  gap: ${(props) => props.theme.spacing.md};
-  margin-bottom: 0;
-  align-items: flex-start;
-  justify-content: center;
-  flex-direction: row; /* Immer eine Zeile erzwingen */
-  flex-wrap: nowrap; /* Verhindert Umbruch in neue Zeile */
+  max-width: 600px;
+  background-color: ${(props) => props.theme.colors.surface};
+  border-radius: ${(props) => props.theme.borderRadius.lg};
+  padding: ${(props) => props.theme.spacing.md};
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid
+    ${(props) =>
+      props.$isFocused ? props.theme.colors.primary : "transparent"};
+  transition: all ${(props) => props.theme.transitions.medium};
+  margin-bottom: ${(props) => props.theme.spacing.lg};
+  position: relative;
 
-  /* Media-Query entfernt, um zu verhindern, dass die Richtung zu column wird */
+  /* Prevent focus ring from appearing on click */
+  &:focus {
+    outline: none;
+  }
+
+  /* Only show focus ring on keyboard navigation */
+  &:focus-visible {
+    outline: 2px solid ${(props) => props.theme.colors.primary};
+    outline-offset: 2px;
+  }
 `;
 
-const SelectionIndicator = styled.div`
+const SearchIconWrapper = styled.div`
+  color: ${(props) => props.theme.colors.text.secondary};
+  margin-right: ${(props) => props.theme.spacing.md};
+  display: flex;
+  align-items: center;
+`;
+
+const SearchField = styled.input`
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: ${(props) => props.theme.typography.fontSize.lg};
+  color: ${(props) => props.theme.colors.text.primary};
+  caret-color: ${(props) => props.theme.colors.primary};
+
+  &::placeholder {
+    color: ${(props) => props.theme.colors.text.disabled};
+  }
+
+  /* Prevent outline on focus for better visual consistency */
+  &:focus {
+    outline: none;
+  }
+`;
+
+// Container for the X button and filter counter to keep them together
+const InputActionsContainer = styled.div`
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+
+  .filter-counter-button {
+    margin-left: ${(props) => props.theme.spacing.xs};
+  }
+`;
+
+const ClearButton = styled.button`
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${(props) => props.theme.colors.text.secondary};
+  padding: ${(props) => props.theme.spacing.xs};
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+
+  /* Ensure the cursor property cascades to all children */
+  svg,
+  path,
+  * {
+    cursor: pointer !important;
+  }
+
+  &:hover {
+    background-color: ${(props) => props.theme.colors.background};
+    color: ${(props) => props.theme.colors.text.primary};
+  }
+
+  /* Remove hover background for tag filter button */
+  &.filter-counter-button:hover {
+    background-color: transparent;
+  }
+
+  /* Remove outline on click */
+  &:focus {
+    outline: none;
+  }
+
+  /* Only show outline for keyboard navigation */
+  &:focus-visible {
+    outline: 2px solid ${(props) => props.theme.colors.primary};
+    outline-offset: 2px;
+  }
+`;
+
+const TagFilterContainer = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer; /* Explicitly set pointer cursor */
+
+  /* Make sure the icon is properly sized and visible */
+  svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2px; /* Make the icon lines thicker */
+    cursor: pointer; /* Ensure cursor is set on the SVG itself */
+  }
+
+  /* Ensure the cursor property cascades to all children */
+  * {
+    cursor: pointer !important;
+  }
+`;
+
+const TagCount = styled.div`
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 12px;
+  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
+  color: ${(props) => props.theme.colors.primary};
+`;
+
+const SearchButton = styled.button`
+  background: ${(props) => props.theme.colors.primary};
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  width: 40px;
+  height: 40px;
+  padding: 0; /* Ensure icon is visible */
+  border-radius: 50%;
+  margin-left: ${(props) => props.theme.spacing.md};
+  cursor: pointer;
+  transition: all ${(props) => props.theme.transitions.short};
+  opacity: 0.85;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Ensure SVG is properly sized */
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const FiltersContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-bottom: ${(props) => props.theme.spacing.lg};
+  max-width: 600px;
+  width: 100%;
+`;
+
+const TagsContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  max-width: 600px;
+  width: 100%;
+`;
+
+const SelectedIndicator = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: ${(props) => props.theme.spacing.md};
-  margin-bottom: ${(props) => props.theme.spacing.md};
-  background-color: ${(props) => props.theme.colors.primary}20;
+  background-color: ${(props) => props.theme.colors.surface};
   border-radius: ${(props) => props.theme.borderRadius.md};
-  border: 1px solid ${(props) => props.theme.colors.primary}40;
+  padding: ${(props) => props.theme.spacing.sm}
+    ${(props) => props.theme.spacing.md};
+  margin-bottom: ${(props) => props.theme.spacing.md};
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 `;
 
-const SelectionText = styled.span`
+const SelectedCount = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${(props) => props.theme.spacing.sm};
   color: ${(props) => props.theme.colors.text.primary};
   font-weight: ${(props) => props.theme.typography.fontWeight.medium};
+`;
+
+const ViewSelectionButton = styled.button`
+  background-color: transparent;
+  color: ${(props) => props.theme.colors.primary};
+  border: none;
+  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
   cursor: pointer;
+  padding: ${(props) => props.theme.spacing.xs}
+    ${(props) => props.theme.spacing.sm};
+  border-radius: ${(props) => props.theme.borderRadius.sm};
 
   &:hover {
-    text-decoration: underline;
+    background-color: ${(props) => props.theme.colors.background};
   }
 `;
 
-const SearchFieldWrapper = styled.div`
-  flex: 1;
-  display: flex;
-  align-items: center;
-`;
-
-const SearchButton = styled(Button)`
-  height: 43px; /* Angepasste Höhe für Position innerhalb des Textfelds */
-  min-height: 43px;
-  max-height: 43px;
+const SelectedPreviewOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 ${(props) => props.theme.spacing.lg};
-  margin: 0;
-  border-radius: ${(props) => props.theme.borderRadius.md};
-  box-sizing: border-box;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
 `;
 
-// Zusätzliche Komponenten für den integrierten Button
-const SearchFieldContainer = styled.div`
-  position: relative;
+const SelectedPreviewContent = styled.div`
+  background-color: ${(props) => props.theme.colors.surface};
+  border-radius: ${(props) => props.theme.borderRadius.lg};
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: ${(props) => props.theme.spacing.lg};
   display: flex;
-  width: 100%;
-  max-width: 800px;
+  flex-direction: column;
 `;
 
-const SearchButtonContainer = styled.div`
-  position: absolute;
-  right: 0;
-  top: 0;
-  height: 100%;
+const SelectedPreviewHeader = styled.div`
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding-right: 8px;
+  margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
-// Passe StyledSearchField an, um Platz für den Button zu lassen
-const StyledSearchField = styled(SearchField)`
-  div {
-    margin-bottom: 0 !important;
+const SelectedPreviewTitle = styled.h3`
+  font-size: ${(props) => props.theme.typography.fontSize.xl};
+  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
+  color: ${(props) => props.theme.colors.text.primary};
+`;
+
+const SelectedItemsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: ${(props) => props.theme.spacing.md};
+  margin-bottom: ${(props) => props.theme.spacing.lg};
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-right: ${(props) => props.theme.spacing.sm}; /* For scrollbar */
+
+  /* Subtle scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
   }
 
-  input {
-    padding-right: 100px !important; /* Platz für den Button */
+  &::-webkit-scrollbar-track {
+    background: ${(props) => props.theme.colors.background};
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${(props) => props.theme.colors.divider};
+    border-radius: ${(props) => props.theme.borderRadius.md};
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: ${(props) => props.theme.colors.text.disabled};
+  }
+`;
+
+const SelectedItemThumb = styled.div`
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: ${(props) => props.theme.borderRadius.md};
+  overflow: hidden;
+  background-color: ${(props) => props.theme.colors.background};
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const ProceedButton = styled.button`
+  background-color: ${(props) => props.theme.colors.primary};
+  color: #000;
+  padding: ${(props) => props.theme.spacing.md};
+  border-radius: ${(props) => props.theme.borderRadius.md};
+  border: none;
+  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
+  cursor: pointer;
+  transition: all ${(props) => props.theme.transitions.short};
+  opacity: 0.85;
+
+  &:hover {
+    opacity: 1;
   }
 `;
 

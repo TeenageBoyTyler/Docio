@@ -9,46 +9,36 @@ import {
   initializeModels,
 } from "../../services/processingService";
 import { useToast } from "../../context/ToastContext";
-// Importieren der standardisierten Komponenten
-import { Button } from "../shared/buttons";
-import { Spinner, LoadingOverlay } from "../shared/loading";
-// Importieren der BackButton-Komponente
-import BackButton from "../shared/navigation/BackButton";
 
 const ProcessingView: React.FC = () => {
-  const { files, goToNextStep, goToPreviousStep } = useUpload();
+  const { files, goToNextStep, goToPreviousStep, setProcessedDocuments } =
+    useUpload();
   const { showToast } = useToast();
 
   const [progress, setProgress] = useState(0);
   const [currentFile, setCurrentFile] = useState(0);
   const [isProcessing, setIsProcessing] = useState(true);
-  const [results, setResults] = useState<ProcessingResult[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  const { setProcessedDocuments } = useUpload();
 
   useEffect(() => {
     const startProcessing = async () => {
       try {
-        // Initialisiere die Modelle
+        // Initialize models
         await initializeModels();
 
-        // Starte die Verarbeitung der Dateien
+        // Start processing files
         const processingResults = await processFiles(
           files,
           (processed, total, result) => {
             setProgress((processed / total) * 100);
             setCurrentFile(processed);
-            if (result) {
-              setResults((prev) => [...prev, result]);
-            }
           }
         );
 
-        // Speichere die Ergebnisse
+        // Save results
         saveProcessingResults(processingResults);
 
-        // Speichere die Ergebnisse im UploadContext
+        // Store results in UploadContext
         const processedDocs: ProcessedDocument[] = processingResults.map(
           (result) => ({
             fileId: result.fileId,
@@ -59,14 +49,12 @@ const ProcessingView: React.FC = () => {
         );
 
         setProcessedDocuments(processedDocs);
-
-        // Verarbeitung abgeschlossen
         setIsProcessing(false);
 
-        // Automatisch zum nächsten Schritt nach kurzer Verzögerung
+        // Automatically proceed to next step after short delay
         setTimeout(() => {
           goToNextStep();
-        }, 1500);
+        }, 500);
       } catch (err) {
         console.error("Processing error:", err);
         setError("Processing failed. Please try again.");
@@ -78,144 +66,36 @@ const ProcessingView: React.FC = () => {
     if (files.length > 0) {
       startProcessing();
     } else {
-      // Falls keine Dateien vorhanden sind, zurück zum vorherigen Schritt
       goToPreviousStep();
     }
   }, [files, goToNextStep, goToPreviousStep, showToast, setProcessedDocuments]);
 
-  // Lade nochmal, falls ein Fehler auftritt
+  // Retry if error occurs
   const handleRetry = () => {
     setProgress(0);
     setCurrentFile(0);
-    setResults([]);
     setError(null);
     setIsProcessing(true);
   };
 
+  // Render only the loading bar for processing
   return (
     <Container>
-      {/* BackButton - nur anzeigen, wenn nicht in aktiver Verarbeitung */}
-      {(!isProcessing || error) && (
-        <BackButtonContainer>
-          <BackButton
-            onClick={goToPreviousStep}
-            showLabel={true}
-            label="Back to Preview"
-          />
-        </BackButtonContainer>
-      )}
+      <ProgressContainer>
+        <ProgressBar
+          as={motion.div}
+          initial={{ width: "0%" }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.5 }}
+        />
+      </ProgressContainer>
 
-      {/* LoadingOverlay für blockierendes Laden bei längeren Prozessen */}
-      <LoadingOverlay
-        isVisible={isProcessing && files.length > 3}
-        text={`Analyzing documents (${currentFile}/${files.length})`}
-        showText={true}
-        blockInteraction={true}
-      />
-
-      <ProcessingContent>
-        <StatusIconContainer>
-          {isProcessing ? (
-            /* Standardisierter Spinner statt eigener Animation */
-            <Spinner size="large" color={error ? undefined : undefined} />
-          ) : error ? (
-            <ErrorIcon>
-              <svg
-                width="64"
-                height="64"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM11 15H13V17H11V15ZM11 7H13V13H11V7Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </ErrorIcon>
-          ) : (
-            <SuccessIcon>
-              <svg
-                width="64"
-                height="64"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM16.59 7.58L10 14.17L7.41 11.59L6 13L10 17L18 9L16.59 7.58Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </SuccessIcon>
-          )}
-        </StatusIconContainer>
-
-        <Title>
-          {error
-            ? "Processing Failed"
-            : isProcessing
-            ? "Processing Documents"
-            : "Processing Complete"}
-        </Title>
-
-        <Description>
-          {error
-            ? "There was an error processing your documents. Please try again."
-            : isProcessing
-            ? `Analyzing documents (${currentFile}/${files.length}). This may take a moment.`
-            : "All documents have been successfully processed."}
-        </Description>
-
-        {isProcessing && !files.length && (
-          <ProgressContainer>
-            <ProgressBar
-              as={motion.div}
-              initial={{ width: "0%" }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.5 }}
-            />
-          </ProgressContainer>
-        )}
-
-        {error && (
-          <ButtonContainer>
-            <Button variant="primary" onClick={handleRetry}>
-              Try Again
-            </Button>
-          </ButtonContainer>
-        )}
-
-        {!isProcessing && !error && (
-          <ProcessingSummary>
-            <SummaryItem>
-              <SummaryLabel>Documents Processed:</SummaryLabel>
-              <SummaryValue>{files.length}</SummaryValue>
-            </SummaryItem>
-            <SummaryItem>
-              <SummaryLabel>Text Extracted:</SummaryLabel>
-              <SummaryValue>
-                {results.filter((r) => r.ocr?.text).length} documents
-              </SummaryValue>
-            </SummaryItem>
-            <SummaryItem>
-              <SummaryLabel>Objects Detected:</SummaryLabel>
-              <SummaryValue>
-                {results.reduce(
-                  (total, r) => total + (r.detections?.length || 0),
-                  0
-                )}{" "}
-                objects
-              </SummaryValue>
-            </SummaryItem>
-          </ProcessingSummary>
-        )}
-      </ProcessingContent>
+      {error && <RetryButton onClick={handleRetry}>Try Again</RetryButton>}
     </Container>
   );
 };
 
-// Styled Components
+// Simplified styled components
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -224,63 +104,15 @@ const Container = styled.div`
   width: 100%;
   height: 100%;
   padding: ${(props) => props.theme.spacing.xl};
-  position: relative; /* Für absolute Positionierung des BackButtons */
-`;
-
-// Neuer Container für den BackButton
-const BackButtonContainer = styled.div`
-  position: absolute;
-  top: ${(props) => props.theme.spacing.lg};
-  left: ${(props) => props.theme.spacing.lg};
-  z-index: ${(props) => props.theme.zIndex.navigation};
-`;
-
-const ProcessingContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  max-width: 500px;
-`;
-
-const StatusIconContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 80px;
-  margin-bottom: ${(props) => props.theme.spacing.lg};
-  color: ${(props) => props.theme.colors.primary};
-`;
-
-const ErrorIcon = styled.div`
-  color: ${(props) => props.theme.colors.error};
-`;
-
-const SuccessIcon = styled.div`
-  color: ${(props) => props.theme.colors.success};
-`;
-
-const Title = styled.h2`
-  font-size: ${(props) => props.theme.typography.fontSize.xxl};
-  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
-  margin-bottom: ${(props) => props.theme.spacing.md};
-  color: ${(props) => props.theme.colors.text.primary};
-`;
-
-const Description = styled.p`
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  color: ${(props) => props.theme.colors.text.secondary};
-  margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
 const ProgressContainer = styled.div`
-  width: 100%;
+  width: 90%;
+  max-width: 600px;
   height: 8px;
   background-color: ${(props) => props.theme.colors.background};
   border-radius: ${(props) => props.theme.borderRadius.md};
   overflow: hidden;
-  margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
 const ProgressBar = styled.div`
@@ -288,38 +120,16 @@ const ProgressBar = styled.div`
   background-color: ${(props) => props.theme.colors.primary};
 `;
 
-// Neuer Container für Buttons um konsistenten Abstand zu gewährleisten
-const ButtonContainer = styled.div`
-  margin-bottom: ${(props) => props.theme.spacing.lg};
-`;
-
-const ProcessingSummary = styled.div`
-  width: 100%;
+const RetryButton = styled.button`
   margin-top: ${(props) => props.theme.spacing.lg};
-  background-color: ${(props) => props.theme.colors.background};
+  padding: ${(props) => props.theme.spacing.sm}
+    ${(props) => props.theme.spacing.md};
+  background-color: ${(props) => props.theme.colors.primary};
+  color: white;
+  border: none;
   border-radius: ${(props) => props.theme.borderRadius.md};
-  padding: ${(props) => props.theme.spacing.md};
-`;
-
-const SummaryItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: ${(props) => props.theme.spacing.sm};
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-`;
-
-const SummaryLabel = styled.span`
-  color: ${(props) => props.theme.colors.text.secondary};
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
-`;
-
-const SummaryValue = styled.span`
-  color: ${(props) => props.theme.colors.text.primary};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
+  cursor: pointer;
+  font-size: ${(props) => props.theme.typography.fontSize.md};
 `;
 
 export default ProcessingView;

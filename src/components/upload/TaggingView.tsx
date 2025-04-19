@@ -3,365 +3,20 @@ import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useUpload } from "../../context/UploadContext";
 import TagSelector from "./TagSelector";
-// Importieren der standardisierten Button-Komponenten
+// Standardized imports from index files
 import { Button, IconButton } from "../shared/buttons";
-// Importieren der BackButton-Komponente
-import BackButton from "../shared/navigation/BackButton";
-// Importieren der standardisierten ProgressIndicator-Komponente
-import ProgressIndicator, {
-  Step,
-} from "../shared/navigation/ProgressIndicator";
+import { BackButton, BackButtonContainer, Title } from "../shared/navigation";
+import { Icon } from "../shared/icons";
 
-const TaggingView: React.FC = () => {
-  const {
-    files,
-    currentFileIndex,
-    setCurrentFileIndex,
-    goToNextStep,
-    goToPreviousStep,
-  } = useUpload();
+// Component-specific styled components
+const Container = styled.div`
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+`;
 
-  const [showEditor, setShowEditor] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  // Falls keine Dateien vorhanden sind, zurück zur Auswahl
-  useEffect(() => {
-    if (files.length === 0) {
-      goToPreviousStep();
-    }
-  }, [files, goToPreviousStep]);
-
-  // Schritte für den ProgressIndicator basierend auf den Files generieren
-  const getProgressSteps = (): Step[] => {
-    return files.map((file, index) => {
-      let status: Step["status"] = "upcoming";
-
-      if (index < currentFileIndex) {
-        status = "completed";
-      } else if (index === currentFileIndex) {
-        status = "current";
-      }
-
-      return {
-        id: file.id,
-        label: `Image ${index + 1}`,
-        status,
-        // Zusätzliche Beschreibung nur für Desktop hinzufügen
-        description: !isMobile
-          ? file.name.substring(0, 20) + (file.name.length > 20 ? "..." : "")
-          : undefined,
-      };
-    });
-  };
-
-  // Aktuelles File
-  const currentFile = files[currentFileIndex];
-
-  // Prüfen ob wir Tags haben (für Next-Button)
-  const hasTag = currentFile?.tags && currentFile.tags.length > 0;
-
-  // Prüfen der Bildschirmgröße
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  // Navigation zu nächstem/vorherigem Bild
-  const goToNextImage = () => {
-    if (currentFileIndex < files.length - 1) {
-      setCurrentFileIndex(currentFileIndex + 1);
-    } else {
-      // Alle Bilder getaggt, zum nächsten Schritt
-      goToNextStep();
-    }
-  };
-
-  const goToPreviousImage = () => {
-    if (currentFileIndex > 0) {
-      setCurrentFileIndex(currentFileIndex - 1);
-    } else {
-      // Zurück zur Vorschau
-      goToPreviousStep();
-    }
-  };
-
-  // Navigation durch ProgressIndicator
-  const handleStepClick = (stepId: string) => {
-    const stepIndex = files.findIndex((file) => file.id === stepId);
-    if (stepIndex >= 0 && stepIndex < currentFileIndex) {
-      setCurrentFileIndex(stepIndex);
-    }
-  };
-
-  // Editor ein-/ausschalten
-  const toggleEditor = () => {
-    setShowEditor(!showEditor);
-  };
-
-  // Rendere die Mobile-Ansicht
-  if (isMobile) {
-    return (
-      <MobileContainer>
-        <Header>
-          {/* BackButton statt IconButton für konsistente Navigation */}
-          <BackButtonContainer>
-            <BackButton
-              onClick={goToPreviousImage}
-              variant="text"
-              showLabel={false}
-              aria-label="Back to previous image or preview"
-            />
-          </BackButtonContainer>
-          <Title>Tag Image</Title>
-
-          {/* Progress-Bar (kompakt für mobile) anstelle von Text */}
-          <ProgressContainer>
-            <ProgressIndicator
-              steps={getProgressSteps()}
-              currentStep={currentFile.id}
-              onStepClick={handleStepClick}
-              compact={true}
-            />
-          </ProgressContainer>
-        </Header>
-
-        <ImageContainer>
-          <PreviewImage
-            src={currentFile.preview}
-            alt={currentFile.name}
-            as={motion.img}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          />
-          <IconButton
-            icon={
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
-                  fill="currentColor"
-                />
-              </svg>
-            }
-            onClick={toggleEditor}
-            variant="primary"
-            style={{
-              position: "absolute",
-              top: "16px",
-              right: "16px",
-              width: "40px",
-              height: "40px",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
-            }}
-          />
-        </ImageContainer>
-
-        {showEditor ? (
-          <EditorContainer
-            as={motion.div}
-            initial={{ y: 300, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 300, opacity: 0 }}
-          >
-            <EditorHeader>
-              <EditorTitle>Edit Image</EditorTitle>
-              <IconButton
-                icon={
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                }
-                onClick={toggleEditor}
-                variant="text"
-              />
-            </EditorHeader>
-            <EditorContent>
-              <ComingSoonMessage>
-                <p>Image editing features coming soon!</p>
-                <ul>
-                  <li>Crop</li>
-                  <li>Rotate</li>
-                  <li>Adjust brightness/contrast</li>
-                </ul>
-              </ComingSoonMessage>
-            </EditorContent>
-          </EditorContainer>
-        ) : (
-          <TaggingContainer>
-            <TagSelector fileId={currentFile.id} />
-            <Button
-              variant="primary"
-              disabled={!hasTag}
-              onClick={goToNextImage}
-              fullWidth
-            >
-              {currentFileIndex < files.length - 1 ? "Next" : "Complete"}
-            </Button>
-          </TaggingContainer>
-        )}
-      </MobileContainer>
-    );
-  }
-
-  // Desktop-Ansicht
-  return (
-    <DesktopContainer>
-      {/* BackButton für Desktop-Ansicht hinzufügen */}
-      <BackButtonContainer desktop>
-        <BackButton
-          onClick={goToPreviousImage}
-          showLabel={true}
-          label="Back to Preview"
-          variant="text"
-        />
-      </BackButtonContainer>
-
-      <ImageSection>
-        <PreviewImage
-          src={currentFile.preview}
-          alt={currentFile.name}
-          as={motion.img}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        />
-        <IconButton
-          icon={
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
-                fill="currentColor"
-              />
-            </svg>
-          }
-          onClick={toggleEditor}
-          variant="primary"
-          style={{
-            position: "absolute",
-            top: "16px",
-            right: "16px",
-            width: "40px",
-            height: "40px",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
-          }}
-        />
-
-        {showEditor && (
-          <EditorPanel
-            as={motion.div}
-            initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 300, opacity: 0 }}
-          >
-            <EditorHeader>
-              <EditorTitle>Edit Image</EditorTitle>
-              <IconButton
-                icon={
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                }
-                onClick={toggleEditor}
-                variant="text"
-              />
-            </EditorHeader>
-            <EditorContent>
-              <ComingSoonMessage>
-                <p>Image editing features coming soon!</p>
-                <ul>
-                  <li>Crop</li>
-                  <li>Rotate</li>
-                  <li>Adjust brightness/contrast</li>
-                </ul>
-              </ComingSoonMessage>
-            </EditorContent>
-          </EditorPanel>
-        )}
-      </ImageSection>
-
-      <SidePanel>
-        <Header>
-          <Title>Tag Image</Title>
-
-          {/* ProgressIndicator anstelle von Text */}
-          <ProgressContainer>
-            <ProgressIndicator
-              steps={getProgressSteps()}
-              currentStep={currentFile.id}
-              onStepClick={handleStepClick}
-            />
-          </ProgressContainer>
-        </Header>
-
-        <TagSelector fileId={currentFile.id} />
-
-        <NavigationButtons>
-          <Button variant="text" onClick={goToPreviousImage}>
-            Previous
-          </Button>
-          <Button variant="primary" disabled={!hasTag} onClick={goToNextImage}>
-            {currentFileIndex < files.length - 1 ? "Next" : "Complete"}
-          </Button>
-        </NavigationButtons>
-
-        <ThumbnailStrip>
-          {files.map((file, index) => (
-            <Thumbnail
-              key={file.id}
-              isActive={index === currentFileIndex}
-              onClick={() => setCurrentFileIndex(index)}
-              as={motion.div}
-              whileHover={{ scale: 1.1, opacity: 1 }}
-            >
-              <img src={file.preview} alt={`Thumbnail ${index + 1}`} />
-              {file.tags.length > 0 && (
-                <TagIndicator>
-                  <TagCount>{file.tags.length}</TagCount>
-                </TagIndicator>
-              )}
-            </Thumbnail>
-          ))}
-        </ThumbnailStrip>
-      </SidePanel>
-    </DesktopContainer>
-  );
-};
-
-// Styled Components für Mobile
+// Styled Components for Mobile
 const MobileContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -379,27 +34,67 @@ const Header = styled.div`
   background-color: ${(props) => props.theme.colors.surface};
 `;
 
-// Container für den BackButton (sowohl Mobile als auch Desktop)
-const BackButtonContainer = styled.div<{ desktop?: boolean }>`
-  position: absolute;
-  left: ${(props) => props.theme.spacing.md};
-  top: ${(props) => (props.desktop ? props.theme.spacing.lg : "50%")};
-  transform: ${(props) => (props.desktop ? "none" : "translateY(-50%)")};
-  z-index: ${(props) => props.theme.zIndex.navigation};
-`;
-
-const Title = styled.h2`
-  font-size: ${(props) => props.theme.typography.fontSize.xl};
-  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
-  margin-bottom: ${(props) => props.theme.spacing.xs};
-  color: ${(props) => props.theme.colors.text.primary};
-`;
-
-// Container für den ProgressIndicator (sowohl Mobile als auch Desktop)
-const ProgressContainer = styled.div`
+// New component for header top row
+const HeaderTopRow = styled.div`
+  display: flex;
+  justify-content: space-between;
   width: 100%;
+  align-items: center;
+  margin-bottom: ${(props) => props.theme.spacing.sm};
+`;
+
+// Thumbnail related components
+interface ThumbnailProps {
+  isActive: boolean;
+}
+
+const Thumbnail = styled.div<ThumbnailProps>`
+  width: 60px;
+  height: 60px;
+  border-radius: ${(props) => props.theme.borderRadius.sm};
+  overflow: hidden;
+  cursor: pointer;
+  opacity: ${(props) => (props.isActive ? 1 : 0.6)};
+  border: 2px solid
+    ${(props) => (props.isActive ? props.theme.colors.primary : "transparent")};
+  transition: all ${(props) => props.theme.transitions.short};
+  position: relative;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+// Container for mobile thumbnails
+const MobileThumbnailStrip = styled.div`
+  width: 100%;
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: ${(props) => props.theme.spacing.sm};
   margin-top: ${(props) => props.theme.spacing.sm};
   margin-bottom: ${(props) => props.theme.spacing.xs};
+  padding-bottom: ${(props) => props.theme.spacing.xs};
+
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  /* Adjust thumbnail size for mobile */
+  ${Thumbnail} {
+    min-width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
 `;
 
 const ImageContainer = styled.div`
@@ -418,6 +113,16 @@ const PreviewImage = styled.img`
   max-height: 100%;
   object-fit: contain;
   border-radius: ${(props) => props.theme.borderRadius.md};
+`;
+
+// Fixed: Replace inline styling with styled component
+const EditButton = styled(IconButton)`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 `;
 
 const EditorContainer = styled.div`
@@ -480,13 +185,20 @@ const TaggingContainer = styled.div`
   background-color: ${(props) => props.theme.colors.surface};
 `;
 
-// Styled Components für Desktop
+const ButtonContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${(props) => props.theme.spacing.md};
+  margin-top: ${(props) => props.theme.spacing.md};
+`;
+
+// Styled Components for Desktop
 const DesktopContainer = styled.div`
   display: flex;
   width: 100%;
   height: 100%;
   background-color: ${(props) => props.theme.colors.background};
-  position: relative; /* Für absolute Positionierung des BackButtons */
+  position: relative;
 `;
 
 const ImageSection = styled.div`
@@ -519,6 +231,12 @@ const SidePanel = styled.div`
   background-color: ${(props) => props.theme.colors.surface};
   padding: ${(props) => props.theme.spacing.lg};
   border-left: 1px solid ${(props) => props.theme.colors.divider};
+  justify-content: space-between; /* This pushes content to top and bottom */
+`;
+
+const SidePanelContent = styled.div`
+  display: flex;
+  flex-direction: column;
 `;
 
 const NavigationButtons = styled.div`
@@ -532,38 +250,30 @@ const ThumbnailStrip = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: ${(props) => props.theme.spacing.sm};
-  margin-top: auto;
-  padding-top: ${(props) => props.theme.spacing.lg};
-  border-top: 1px solid ${(props) => props.theme.colors.divider};
+  margin-top: ${(props) => props.theme.spacing.md};
+  margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
-interface ThumbnailProps {
-  isActive: boolean;
-}
-
-const Thumbnail = styled.div<ThumbnailProps>`
-  width: 60px;
-  height: 60px;
-  border-radius: ${(props) => props.theme.borderRadius.sm};
-  overflow: hidden;
-  cursor: pointer;
-  opacity: ${(props) => (props.isActive ? 1 : 0.6)};
-  border: 2px solid
-    ${(props) => (props.isActive ? props.theme.colors.primary : "transparent")};
-  transition: all ${(props) => props.theme.transitions.short};
-  position: relative;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+// Button styling
+const CancelButtonTop = styled(Button)`
+  color: ${(props) => props.theme.colors.error};
+  align-self: flex-start;
+  margin-bottom: ${(props) => props.theme.spacing.md};
 
   &:hover {
-    opacity: 0.9;
+    background-color: rgba(244, 67, 54, 0.08);
   }
 `;
 
+const CompleteButton = styled(Button)`
+  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
+`;
+
+const CompleteButtonWrapper = styled.div`
+  margin-top: ${(props) => props.theme.spacing.lg};
+`;
+
+// Tag indicator components
 const TagIndicator = styled.div`
   position: absolute;
   top: 3px;
@@ -582,5 +292,320 @@ const TagCount = styled.span`
   font-size: 11px;
   font-weight: ${(props) => props.theme.typography.fontWeight.bold};
 `;
+
+// Component definition
+interface TaggingViewProps {
+  onComplete?: () => void;
+  isProcessing?: boolean;
+}
+
+const TaggingView: React.FC<TaggingViewProps> = ({
+  onComplete,
+  isProcessing = false,
+}) => {
+  const {
+    files,
+    currentFileIndex,
+    setCurrentFileIndex,
+    goToNextStep,
+    goToPreviousStep,
+    clearFiles,
+  } = useUpload();
+
+  const [showEditor, setShowEditor] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // Falls keine Dateien vorhanden sind oder currentFileIndex ungültig ist, zurück zur Auswahl
+  useEffect(() => {
+    if (files.length === 0 || currentFileIndex >= files.length) {
+      goToPreviousStep();
+    }
+  }, [files, currentFileIndex, goToPreviousStep]);
+
+  // Progress steps function is removed as we no longer need it
+
+  // Sicherheitsprüfung für currentFile
+  const currentFile = files[currentFileIndex];
+
+  // Prüfen ob wir Tags haben (für Next-Button) - mit Sicherheitscheck
+  const hasTag = currentFile?.tags && currentFile.tags.length > 0;
+
+  // Prüfen der Bildschirmgröße
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Navigation zu nächstem/vorherigem Bild
+  const goToNextImage = () => {
+    if (currentFileIndex < files.length - 1) {
+      setCurrentFileIndex(currentFileIndex + 1);
+    } else {
+      // Alle Bilder getaggt, zum nächsten Schritt
+      if (onComplete) {
+        onComplete(); // Trigger processing
+      }
+      goToNextStep();
+    }
+  };
+
+  const goToPreviousImage = () => {
+    if (currentFileIndex > 0) {
+      setCurrentFileIndex(currentFileIndex - 1);
+    } else {
+      // Zurück zur Vorschau
+      goToPreviousStep();
+    }
+  };
+
+  // Handle cancel upload
+  const handleCancelUpload = () => {
+    clearFiles();
+  };
+
+  // Navigation function removed as we no longer use progress indicator
+
+  // Editor ein-/ausschalten
+  const toggleEditor = () => {
+    setShowEditor(!showEditor);
+  };
+
+  // Sicherheitsüberprüfung - wenn kein aktuelles File vorhanden ist, zur Vorschau zurückkehren
+  if (!currentFile) {
+    return null; // Rendering wird übersprungen und useEffect führt goToPreviousStep aus
+  }
+
+  // Rendere die Mobile-Ansicht
+  if (isMobile) {
+    return (
+      <MobileContainer>
+        <Header>
+          <HeaderTopRow>
+            {/* Use standardized BackButtonContainer */}
+            <BackButtonContainer>
+              <BackButton
+                onClick={goToPreviousImage}
+                variant="text"
+                showLabel={false}
+                aria-label="Back to previous image or preview"
+              />
+            </BackButtonContainer>
+          </HeaderTopRow>
+
+          <Title>Tag Image</Title>
+
+          {/* Thumbnail strip instead of progress indicator */}
+          <MobileThumbnailStrip>
+            {files.map((file, index) => (
+              <Thumbnail
+                key={file.id}
+                isActive={index === currentFileIndex}
+                onClick={() => setCurrentFileIndex(index)}
+                as={motion.div}
+                whileHover={{ scale: 1.1, opacity: 1 }}
+              >
+                <img src={file.preview} alt={`Thumbnail ${index + 1}`} />
+                {file.tags.length > 0 && (
+                  <TagIndicator>
+                    <TagCount>{file.tags.length}</TagCount>
+                  </TagIndicator>
+                )}
+              </Thumbnail>
+            ))}
+          </MobileThumbnailStrip>
+        </Header>
+
+        <ImageContainer>
+          <PreviewImage
+            src={currentFile.preview}
+            alt={currentFile.name || "Image preview"}
+            as={motion.img}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          />
+          <EditButton
+            iconName="Edit2"
+            onClick={toggleEditor}
+            variant="primary"
+            aria-label="Edit image"
+          />
+        </ImageContainer>
+
+        {showEditor ? (
+          <EditorContainer
+            as={motion.div}
+            initial={{ y: 300, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 300, opacity: 0 }}
+          >
+            <EditorHeader>
+              <EditorTitle>Edit Image</EditorTitle>
+              <IconButton
+                iconName="X"
+                onClick={toggleEditor}
+                variant="text"
+                aria-label="Close editor"
+              />
+            </EditorHeader>
+            <EditorContent>
+              <ComingSoonMessage>
+                <p>Image editing features coming soon!</p>
+                <ul>
+                  <li>Crop</li>
+                  <li>Rotate</li>
+                  <li>Adjust brightness/contrast</li>
+                </ul>
+              </ComingSoonMessage>
+            </EditorContent>
+          </EditorContainer>
+        ) : (
+          <TaggingContainer>
+            <TagSelector fileId={currentFile.id} />
+            <ButtonContainer>
+              <Button
+                variant="primary"
+                disabled={!hasTag}
+                onClick={goToNextImage}
+                fullWidth
+              >
+                {currentFileIndex < files.length - 1 ? "Next" : "Complete"}
+              </Button>
+              <Button
+                onClick={handleCancelUpload}
+                fullWidth
+                variant="text"
+                style={{ color: "#FF5252" }}
+              >
+                Cancel Upload
+              </Button>
+            </ButtonContainer>
+          </TaggingContainer>
+        )}
+      </MobileContainer>
+    );
+  }
+
+  // Desktop-Ansicht
+  return (
+    <DesktopContainer>
+      {/* Use standardized BackButtonContainer */}
+      <BackButtonContainer position="absolute">
+        <BackButton
+          onClick={goToPreviousImage}
+          showLabel={true}
+          label="Back to Preview"
+          variant="text"
+        />
+      </BackButtonContainer>
+
+      <ImageSection>
+        <PreviewImage
+          src={currentFile.preview}
+          alt={currentFile.name || "Image preview"}
+          as={motion.img}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        />
+        <EditButton
+          iconName="Edit2"
+          onClick={toggleEditor}
+          variant="primary"
+          aria-label="Edit image"
+        />
+
+        {showEditor && (
+          <EditorPanel
+            as={motion.div}
+            initial={{ x: 300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 300, opacity: 0 }}
+          >
+            <EditorHeader>
+              <EditorTitle>Edit Image</EditorTitle>
+              <IconButton
+                iconName="X"
+                onClick={toggleEditor}
+                variant="text"
+                aria-label="Close editor"
+              />
+            </EditorHeader>
+            <EditorContent>
+              <ComingSoonMessage>
+                <p>Image editing features coming soon!</p>
+                <ul>
+                  <li>Crop</li>
+                  <li>Rotate</li>
+                  <li>Adjust brightness/contrast</li>
+                </ul>
+              </ComingSoonMessage>
+            </EditorContent>
+          </EditorPanel>
+        )}
+      </ImageSection>
+
+      <SidePanel>
+        {/* Cancel button at the absolute top */}
+        <CancelButtonTop onClick={handleCancelUpload} variant="text">
+          Cancel Upload
+        </CancelButtonTop>
+
+        <SidePanelContent>
+          <Header>
+            <Title>Tag Image</Title>
+
+            {/* Thumbnail strip instead of progress indicator */}
+            <ThumbnailStrip>
+              {files.map((file, index) => (
+                <Thumbnail
+                  key={file.id}
+                  isActive={index === currentFileIndex}
+                  onClick={() => setCurrentFileIndex(index)}
+                  as={motion.div}
+                  whileHover={{ scale: 1.1, opacity: 1 }}
+                >
+                  <img src={file.preview} alt={`Thumbnail ${index + 1}`} />
+                  {file.tags.length > 0 && (
+                    <TagIndicator>
+                      <TagCount>{file.tags.length}</TagCount>
+                    </TagIndicator>
+                  )}
+                </Thumbnail>
+              ))}
+            </ThumbnailStrip>
+
+            <NavigationButtons>
+              <Button variant="text" onClick={goToPreviousImage}>
+                Previous
+              </Button>
+              <Button variant="text" disabled={!hasTag} onClick={goToNextImage}>
+                Next
+              </Button>
+            </NavigationButtons>
+          </Header>
+
+          <TagSelector fileId={currentFile.id} />
+        </SidePanelContent>
+
+        {/* Complete button at the bottom */}
+        <CompleteButtonWrapper>
+          <CompleteButton
+            onClick={goToNextImage}
+            fullWidth
+            variant="primary"
+            disabled={!hasTag}
+          >
+            {currentFileIndex < files.length - 1 ? "Next Document" : "Complete"}
+          </CompleteButton>
+        </CompleteButtonWrapper>
+      </SidePanel>
+    </DesktopContainer>
+  );
+};
 
 export default TaggingView;

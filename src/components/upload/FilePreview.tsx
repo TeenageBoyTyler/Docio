@@ -2,12 +2,16 @@ import React from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useUpload } from "../../context/UploadContext";
-// Importieren der standardisierten Komponenten
+// Standardized imports from index files
 import { Button, IconButton } from "../shared/buttons";
-import BackButton from "../shared/navigation/BackButton";
 
-const FilePreview: React.FC = () => {
-  const { files, removeFile, goToNextStep, goToPreviousStep } = useUpload();
+interface FilePreviewProps {
+  onAddMore?: () => void; // Optional callback for Add More functionality
+}
+
+const FilePreview: React.FC<FilePreviewProps> = ({ onAddMore }) => {
+  const { files, removeFile, goToNextStep, goToPreviousStep, clearFiles } =
+    useUpload();
 
   // Falls keine Dateien vorhanden sind, zurück zur Auswahl
   React.useEffect(() => {
@@ -16,16 +20,26 @@ const FilePreview: React.FC = () => {
     }
   }, [files, goToPreviousStep]);
 
+  // Handle "Add More" functionality
+  const handleAddMore = () => {
+    if (onAddMore) {
+      // Use the provided callback if available
+      onAddMore();
+    } else {
+      // Fallback to previous behavior
+      goToPreviousStep();
+    }
+  };
+
+  // Handle cancel upload
+  const handleCancelUpload = () => {
+    clearFiles();
+  };
+
   return (
     <Container>
       <Header>
-        {/* Standardisierte BackButton-Komponente hinzufügen */}
-        <BackButton
-          onClick={goToPreviousStep}
-          label="Back to Selection"
-          showLabel={true}
-          variant="text"
-        />
+        {/* No back button as requested */}
         <TitleContainer>
           <Title>Preview & Confirm</Title>
           <SubTitle>
@@ -39,47 +53,29 @@ const FilePreview: React.FC = () => {
           <GridItem key={file.id} as={motion.div} layout>
             <PreviewImage src={file.preview} alt={file.name} />
             <FileName>{file.name}</FileName>
-            <IconButton
-              icon={
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
-                    fill="currentColor"
-                  />
-                </svg>
-              }
+            <RemoveButton
+              iconName="X"
               onClick={() => removeFile(file.id)}
               size="small"
               variant="text"
-              style={{
-                position: "absolute",
-                top: "4px",
-                right: "4px",
-                width: "24px",
-                height: "24px",
-                borderRadius: "50%",
-                backgroundColor: "rgba(0, 0, 0, 0.5)",
-                color: "white",
-                opacity: "0.7",
-              }}
+              aria-label={`Remove ${file.name}`}
             />
           </GridItem>
         ))}
       </GridContainer>
 
       <ButtonGroup>
-        <Button variant="text" onClick={goToPreviousStep}>
-          Add More
-        </Button>
-        <Button variant="primary" onClick={goToNextStep}>
-          Continue
-        </Button>
+        <CancelButton variant="text" onClick={handleCancelUpload}>
+          Cancel Upload
+        </CancelButton>
+        <RightButtonGroup>
+          <Button variant="text" onClick={handleAddMore}>
+            Add More
+          </Button>
+          <Button variant="primary" onClick={goToNextStep}>
+            Continue
+          </Button>
+        </RightButtonGroup>
       </ButtonGroup>
     </Container>
   );
@@ -99,6 +95,7 @@ const Header = styled.div`
   display: flex;
   align-items: flex-start;
   margin-bottom: ${(props) => props.theme.spacing.xl};
+  position: relative;
 `;
 
 const TitleContainer = styled.div`
@@ -158,6 +155,23 @@ const FileName = styled.div`
   align-items: center;
 `;
 
+// Fixed: Replace inline styles with styled component
+const RemoveButton = styled(IconButton)`
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  opacity: 0.7;
+
+  &:hover {
+    opacity: 1;
+  }
+`;
+
 const ButtonGroup = styled.div`
   display: flex;
   justify-content: space-between;
@@ -167,6 +181,25 @@ const ButtonGroup = styled.div`
   @media (max-width: ${(props) => props.theme.breakpoints.sm}) {
     flex-direction: column;
     gap: ${(props) => props.theme.spacing.md};
+  }
+`;
+
+// New component for right-aligned buttons
+const RightButtonGroup = styled.div`
+  display: flex;
+  gap: ${(props) => props.theme.spacing.md};
+
+  @media (max-width: ${(props) => props.theme.breakpoints.sm}) {
+    justify-content: space-between;
+  }
+`;
+
+// Cancel button with optional styling
+const CancelButton = styled(Button)`
+  color: ${(props) => props.theme.colors.error};
+
+  &:hover {
+    background-color: rgba(244, 67, 54, 0.08);
   }
 `;
 

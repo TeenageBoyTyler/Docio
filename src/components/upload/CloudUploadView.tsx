@@ -7,9 +7,11 @@ import {
   MetadataStorage,
 } from "../../services/cloudStorageService";
 import { useToast } from "../../context/ToastContext";
+// Standardized imports from index files
 import { Button } from "../shared/buttons";
 import { LoadingOverlay, SyncIndicator } from "../shared/loading";
-import { BackButton } from "../shared/navigation";
+import { BackButton, BackButtonContainer } from "../shared/navigation";
+import { Icon } from "../shared/icons";
 
 const CloudUploadView: React.FC = () => {
   const { files, processedDocuments, goToNextStep, goToPreviousStep } =
@@ -161,10 +163,15 @@ const CloudUploadView: React.FC = () => {
 
   return (
     <Container>
-      {/* BackButton - nur anzeigen, wenn kein Upload läuft oder ein Fehler aufgetreten ist */}
+      {/* Use the standardized BackButtonContainer component */}
       {(!isUploading || error) && (
-        <BackButtonContainer>
-          <BackButton onClick={goToPreviousStep} />
+        <BackButtonContainer position="absolute">
+          <BackButton
+            onClick={goToPreviousStep}
+            showLabel={false}
+            label="Back to Previous Step"
+            variant="text"
+          />
         </BackButtonContainer>
       )}
 
@@ -179,20 +186,9 @@ const CloudUploadView: React.FC = () => {
       <UploadContent>
         <StatusIconContainer>
           {!isConnected ? (
-            <CloudIcon>
-              <svg
-                width="64"
-                height="64"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04ZM19 18H6C3.79 18 2 16.21 2 14C2 11.95 3.53 10.24 5.56 10.03L6.63 9.92L7.13 8.97C8.08 7.14 9.94 6 12 6C14.62 6 16.88 7.86 17.39 10.43L17.69 11.93L19.22 12.04C20.78 12.14 22 13.45 22 15C22 16.65 20.65 18 19 18ZM8 13H10.55V16H13.45V13H16L12 9L8 13Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </CloudIcon>
+            <CloudIconWrapper>
+              <Icon name="Cloud" size="large" color="currentColor" />
+            </CloudIconWrapper>
           ) : (
             <SyncIndicator
               status={syncStatus}
@@ -287,15 +283,6 @@ const Container = styled.div`
   position: relative;
 `;
 
-const BackButtonContainer = styled.div`
-  position: absolute;
-  top: ${(props) => props.theme.spacing.md};
-  left: ${(props) => props.theme.spacing.md};
-  z-index: ${(props) =>
-    props.theme.zIndex.elevated +
-    1}; // Sicherstellen, dass es über dem LoadingOverlay angezeigt wird
-`;
-
 const UploadContent = styled.div`
   display: flex;
   flex-direction: column;
@@ -314,8 +301,14 @@ const StatusIconContainer = styled.div`
   margin-bottom: ${(props) => props.theme.spacing.lg};
 `;
 
-const CloudIcon = styled.div`
+// Fixed: Proper icon wrapper that doesn't manipulate the internal structure
+const CloudIconWrapper = styled.div`
   color: ${(props) => props.theme.colors.primary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
 `;
 
 const Title = styled.h2`

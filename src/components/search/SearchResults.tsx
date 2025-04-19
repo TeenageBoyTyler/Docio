@@ -2,91 +2,70 @@ import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearch } from "../../context/SearchContext";
-import { SearchResult } from "../../services/searchService";
-import { loadPreviewsForResults } from "../../services/searchService";
-// Importieren der standardisierten Komponenten
-import { Button, IconTextButton } from "../shared/buttons";
 import { EmptySearch } from "../shared/empty";
-import { BackButton } from "../shared/navigation";
+// Import standardisierte Komponenten
+import Icon from "../shared/icons/Icon";
+import { IconButton } from "../shared/buttons";
+import { BackButton, BackButtonContainer } from "../shared/navigation";
 
-// In einer vollständigen Implementierung würden wir react-window für die Virtualisierung verwenden
-// Für jetzt implementieren wir eine einfache Version ohne Virtualisierung
 const SearchResults: React.FC = () => {
   const {
-    results,
-    selectDocument,
-    unselectDocument,
-    selectedDocuments,
-    goToNextStep,
-    goToPreviousStep,
+    query, // Geändert von searchQuery
+    results, // Geändert von searchResults
     isLoading,
-    searchQuery, // Wir benötigen den searchQuery für die EmptySearch-Komponente
+    selectedDocuments, // Geändert von selectedItems
+    selectDocument, // Geändert von toggleItemSelection
+    unselectDocument,
+    clearFilters, // Geändert von clearSearch
+    goToStep, // Verwende direkt goToStep statt goToNextStep
+    goToPreviousStep,
   } = useSearch();
 
-  const [resultsWithPreviews, setResultsWithPreviews] = useState<
-    SearchResult[]
-  >([]);
-  const [loadingPreviews, setLoadingPreviews] = useState(false);
+  const [showFloatingAction, setShowFloatingAction] = useState(false);
 
-  // Lade Vorschaubilder für die Ergebnisse
-  useEffect(() => {
-    const loadPreviews = async () => {
-      if (results.length === 0) return;
-
-      setLoadingPreviews(true);
-      try {
-        const withPreviews = await loadPreviewsForResults(results);
-        setResultsWithPreviews(withPreviews);
-      } catch (error) {
-        console.error("Error loading previews:", error);
-      } finally {
-        setLoadingPreviews(false);
-      }
-    };
-
-    loadPreviews();
-  }, [results]);
-
-  // Prüfen, ob ein Dokument ausgewählt ist
-  const isDocumentSelected = (id: string) => {
-    return selectedDocuments.some((doc) => doc.id === id);
-  };
-
-  // Handler für Klick auf ein Dokument
-  const handleDocumentClick = (result: SearchResult) => {
-    // Erstelle ein SearchDocument aus dem SearchResult
-    const document = {
-      id: result.id,
-      name: result.name,
-      path: result.path,
-      preview: result.preview || "",
-      tags: result.tags,
-      uploadDate: result.uploadDate,
-    };
-
-    if (isDocumentSelected(result.id)) {
-      unselectDocument(result.id);
+  // Toggle Funktion für die Auswahl von Dokumenten
+  const toggleItemSelection = (itemId: string) => {
+    const isSelected = selectedDocuments?.some((item) => item.id === itemId);
+    if (isSelected) {
+      unselectDocument(itemId);
     } else {
-      selectDocument(document);
+      const item = results?.find((result) => result.id === itemId);
+      if (item) {
+        // Umwandlung vom SearchResult zum SearchDocument
+        selectDocument({
+          id: item.id,
+          name: item.title || "Unnamed Document",
+          path: item.path || "",
+          preview: item.thumbnail || "",
+          tags: item.tags || [],
+          uploadDate: item.date || new Date().toISOString(),
+        });
+      }
     }
   };
 
-  // Handler für "Weiter"-Button
-  const handleProceed = () => {
-    if (selectedDocuments.length > 0) {
-      goToNextStep();
-    }
+  // Zeige den schwebenden Aktionsbutton, wenn Elemente ausgewählt sind
+  useEffect(() => {
+    setShowFloatingAction(!!selectedDocuments && selectedDocuments.length > 0);
+  }, [selectedDocuments]);
+
+  // Gehe zum nächsten Schritt (Aktionen)
+  const handleProceedToActions = () => {
+    goToStep("actions");
   };
 
-  // Rendere eine Nachricht, wenn keine Ergebnisse gefunden wurden
-  if (results.length === 0 && !isLoading) {
+  // Vermeide leere Suchergebnisse
+  if ((!results || results.length === 0) && !isLoading) {
     return (
       <Container>
+        {/* Remove the BackButtonContainer for the empty state */}
         <EmptySearch
-          searchTerm={searchQuery}
-          onBackToSearch={goToPreviousStep}
-          description="Bitte versuchen Sie es mit anderen Suchbegriffen oder Filtern."
-          primaryActionText="Zurück zur Suche"
+          query={query}
+          onBackToSearch={() => goToPreviousStep()}
+          onNewSearch={() => {
+            clearFilters();
+            goToStep("input");
+          }}
         />
       </Container>
     );
@@ -94,215 +73,257 @@ const SearchResults: React.FC = () => {
 
   return (
     <Container>
-      <Header>
-        <BackButton onClick={goToPreviousStep} label="Zurück" />
-        <ResultsCount>
-          {results.length} {results.length === 1 ? "Ergebnis" : "Ergebnisse"}{" "}
-          gefunden
-        </ResultsCount>
-        <SelectionCount>{selectedDocuments.length} ausgewählt</SelectionCount>
-      </Header>
+      <BackButtonContainer>
+        <BackButton
+          onClick={() => goToPreviousStep()}
+          showLabel
+          label="Back to Search"
+        />
+      </BackButtonContainer>
 
-      {/* Ergebnisse als Grid anzeigen */}
+      <ResultsHeader>
+        <ResultsInfo>
+          <ResultsTitle>Search Results</ResultsTitle>
+          <ResultsCount>
+            {results?.length || 0}{" "}
+            {(results?.length || 0) === 1 ? "document" : "documents"} found for
+            "{query}"
+          </ResultsCount>
+        </ResultsInfo>
+
+        <FilterActions>
+          <SortButton>
+            <Icon name="ArrowUpDown" size="small" color="currentColor" />
+            <SortText>Sort</SortText>
+          </SortButton>
+          <FilterButton>
+            <Icon name="Filter" size="small" color="currentColor" />
+            <FilterText>Filter</FilterText>
+          </FilterButton>
+        </FilterActions>
+      </ResultsHeader>
+
+      {selectedDocuments && selectedDocuments.length > 0 && (
+        <SelectionCounter>
+          <SelectedCountText>
+            <Icon name="Check" size="small" color="#4CAF50" />
+            <span>
+              {selectedDocuments.length}{" "}
+              {selectedDocuments.length === 1 ? "item" : "items"} selected
+            </span>
+          </SelectedCountText>
+          <ClearSelectionButton
+            onClick={() =>
+              selectedDocuments.forEach((item) => unselectDocument(item.id))
+            }
+          >
+            Clear
+          </ClearSelectionButton>
+        </SelectionCounter>
+      )}
+
       <ResultsGrid>
         <AnimatePresence>
-          {resultsWithPreviews.map((result) => (
-            <GridItem
-              key={result.id}
-              as={motion.div}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => handleDocumentClick(result)}
-              isSelected={isDocumentSelected(result.id)}
-            >
-              {result.preview ? (
-                <DocumentPreview src={result.preview} alt={result.name} />
-              ) : (
-                <PlaceholderPreview>
-                  <svg
-                    width="48"
-                    height="48"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M14 2H6C4.9 2 4.01 2.9 4.01 4L4 20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2ZM18 20H6V4H13V9H18V20Z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </PlaceholderPreview>
-              )}
-              <DocumentInfo>
-                <DocumentName>{result.name}</DocumentName>
-                <DocumentDetails>
-                  {new Date(result.uploadDate).toLocaleDateString()}
-                </DocumentDetails>
-              </DocumentInfo>
-              {isDocumentSelected(result.id) && (
-                <SelectionIndicator>
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </SelectionIndicator>
-              )}
-            </GridItem>
-          ))}
+          {results &&
+            results.map((result) => {
+              const isSelected = selectedDocuments?.some(
+                (item) => item.id === result.id
+              );
+              return (
+                <ResultItem
+                  key={result.id}
+                  onClick={() => toggleItemSelection(result.id)}
+                  as={motion.div}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  whileHover={{ scale: 1.02 }}
+                  $isSelected={!!isSelected}
+                >
+                  <ItemThumbnail
+                    src={result.thumbnail}
+                    alt={result.title || "Document"}
+                  />
+                  {isSelected && (
+                    <SelectionIndicator>
+                      <Icon name="Check" size="small" color="#000" />
+                    </SelectionIndicator>
+                  )}
+                </ResultItem>
+              );
+            })}
         </AnimatePresence>
       </ResultsGrid>
 
-      {/* Proceed-Button, wird angezeigt, wenn Dokumente ausgewählt sind */}
-      {selectedDocuments.length > 0 && (
-        <ProceedButtonContainer
-          as={motion.div}
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 50 }}
-        >
-          <IconTextButton
-            icon={
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M12 4L10.59 5.41L16.17 11H4V13H16.17L10.59 18.59L12 20L20 12L12 4Z"
-                  fill="currentColor"
-                />
-              </svg>
-            }
-            onClick={handleProceed}
-            variant="primary"
-            iconPosition="right"
+      <AnimatePresence>
+        {showFloatingAction && (
+          <FloatingActionButton
+            onClick={handleProceedToActions}
+            as={motion.button}
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            Weiter
-          </IconTextButton>
-        </ProceedButtonContainer>
-      )}
+            <Icon name="ArrowRight" size="medium" color="#000" />
+          </FloatingActionButton>
+        )}
+      </AnimatePresence>
     </Container>
   );
 };
 
-// Styled Components
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
   padding: ${(props) => props.theme.spacing.lg};
-`;
+  position: relative;
+  overflow-y: auto;
 
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: ${(props) => props.theme.spacing.lg};
+  /* Subtle scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
 
-  @media (max-width: ${(props) => props.theme.breakpoints.sm}) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: ${(props) => props.theme.spacing.sm};
+  &::-webkit-scrollbar-track {
+    background: ${(props) => props.theme.colors.background};
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${(props) => props.theme.colors.divider};
+    border-radius: ${(props) => props.theme.borderRadius.md};
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: ${(props) => props.theme.colors.text.disabled};
   }
 `;
 
-const ResultsCount = styled.span`
+const ResultsHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: ${(props) => props.theme.spacing.md};
+  flex-wrap: wrap;
+  gap: ${(props) => props.theme.spacing.md};
+`;
+
+const ResultsInfo = styled.div`
+  flex: 1;
+  min-width: 200px;
+`;
+
+const ResultsTitle = styled.h2`
+  font-size: ${(props) => props.theme.typography.fontSize.xl};
+  font-weight: ${(props) => props.theme.typography.fontWeight.bold};
+  margin-bottom: ${(props) => props.theme.spacing.xs};
   color: ${(props) => props.theme.colors.text.primary};
+`;
+
+const ResultsCount = styled.p`
   font-size: ${(props) => props.theme.typography.fontSize.md};
+  color: ${(props) => props.theme.colors.text.secondary};
+`;
+
+const FilterActions = styled.div`
+  display: flex;
+  gap: ${(props) => props.theme.spacing.md};
+`;
+
+const SortButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${(props) => props.theme.spacing.xs};
+  padding: ${(props) => props.theme.spacing.sm}
+    ${(props) => props.theme.spacing.md};
+  background-color: ${(props) => props.theme.colors.surface};
+  border: none;
+  border-radius: ${(props) => props.theme.borderRadius.md};
+  color: ${(props) => props.theme.colors.text.primary};
+  font-size: ${(props) => props.theme.typography.fontSize.sm};
+  cursor: pointer;
+  transition: all ${(props) => props.theme.transitions.short};
+
+  &:hover {
+    background-color: ${(props) => props.theme.colors.background};
+  }
+`;
+
+const FilterButton = styled(SortButton)``;
+
+const SortText = styled.span``;
+
+const FilterText = styled.span``;
+
+const SelectionCounter = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: ${(props) => props.theme.spacing.sm}
+    ${(props) => props.theme.spacing.md};
+  background-color: ${(props) => props.theme.colors.surface};
+  border-radius: ${(props) => props.theme.borderRadius.md};
+  margin-bottom: ${(props) => props.theme.spacing.md};
+`;
+
+const SelectedCountText = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${(props) => props.theme.spacing.sm};
   font-weight: ${(props) => props.theme.typography.fontWeight.medium};
 `;
 
-const SelectionCount = styled.span`
+const ClearSelectionButton = styled.button`
+  background: transparent;
+  border: none;
   color: ${(props) => props.theme.colors.primary};
-  font-size: ${(props) => props.theme.typography.fontSize.md};
-  font-weight: ${(props) => props.theme.typography.fontWeight.medium};
+  font-size: ${(props) => props.theme.typography.fontSize.sm};
+  cursor: pointer;
+  padding: ${(props) => props.theme.spacing.xs}
+    ${(props) => props.theme.spacing.sm};
+  border-radius: ${(props) => props.theme.borderRadius.sm};
+
+  &:hover {
+    background-color: ${(props) => props.theme.colors.background};
+  }
 `;
 
 const ResultsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: ${(props) => props.theme.spacing.md};
   margin-bottom: ${(props) => props.theme.spacing.xl};
 
-  @media (max-width: ${(props) => props.theme.breakpoints.sm}) {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  @media (min-width: ${(props) => props.theme.breakpoints.md}) {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 `;
 
-interface GridItemProps {
-  isSelected: boolean;
+interface ResultItemProps {
+  $isSelected: boolean;
 }
 
-const GridItem = styled.div<GridItemProps>`
+const ResultItem = styled.div<ResultItemProps>`
   position: relative;
   border-radius: ${(props) => props.theme.borderRadius.md};
   overflow: hidden;
-  background-color: ${(props) => props.theme.colors.background};
   aspect-ratio: 1;
-  display: flex;
-  flex-direction: column;
   cursor: pointer;
-  transition: all ${(props) => props.theme.transitions.short};
   border: 2px solid
     ${(props) =>
-      props.isSelected ? props.theme.colors.primary : "transparent"};
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 8px ${(props) => props.theme.colors.shadow};
-  }
+      props.$isSelected ? props.theme.colors.primary : "transparent"};
+  transition: all ${(props) => props.theme.transitions.short};
 `;
 
-const DocumentPreview = styled.img`
+const ItemThumbnail = styled.img`
   width: 100%;
-  height: 75%;
+  height: 100%;
   object-fit: cover;
-  border-bottom: 1px solid ${(props) => props.theme.colors.divider};
-`;
-
-const PlaceholderPreview = styled.div`
-  width: 100%;
-  height: 75%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: ${(props) => props.theme.colors.background};
-  color: ${(props) => props.theme.colors.text.disabled};
-  border-bottom: 1px solid ${(props) => props.theme.colors.divider};
-`;
-
-const DocumentInfo = styled.div`
-  padding: ${(props) => props.theme.spacing.sm};
-  height: 25%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-`;
-
-const DocumentName = styled.div`
-  font-size: ${(props) => props.theme.typography.fontSize.sm};
-  color: ${(props) => props.theme.colors.text.primary};
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const DocumentDetails = styled.div`
-  font-size: ${(props) => props.theme.typography.fontSize.xs};
-  color: ${(props) => props.theme.colors.text.secondary};
 `;
 
 const SelectionIndicator = styled.div`
@@ -313,20 +334,33 @@ const SelectionIndicator = styled.div`
   height: 24px;
   border-radius: 50%;
   background-color: ${(props) => props.theme.colors.primary};
-  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 `;
 
-const ProceedButtonContainer = styled.div`
-  position: sticky;
-  bottom: ${(props) => props.theme.spacing.md};
+const FloatingActionButton = styled.button`
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: ${(props) => props.theme.colors.primary};
   display: flex;
+  align-items: center;
   justify-content: center;
-  width: 100%;
-  padding: ${(props) => props.theme.spacing.md} 0;
-  z-index: ${(props) => props.theme.zIndex.elevated};
+  border: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 10;
+  transition: all ${(props) => props.theme.transitions.short};
+  opacity: 0.85;
+
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 export default SearchResults;
